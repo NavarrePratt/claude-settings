@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "env": {
+    "CLAUDE_BASH_MAINTAIN_PROJECT_WORKING_DIR": "true",
+    "CLAUDE_CODE_MAX_OUTPUT_TOKENS": "64000",
+    "MAX_THINKING_TOKENS": "31999"
+  },
+  "includeCoAuthoredBy": false,
+  "permissions": {
+    "additionalDirectories": ["/Users/npratt/git"],
+    "deny": ["mcp__codex__codex-reply"],
+    "defaultMode": "bypassPermissions"
+  },
+  "model": "opus",
+  "alwaysThinkingEnabled": true,
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bd prime 2>/dev/null || true"
+          }
+        ]
+      }
+    ]
+  }
+}
