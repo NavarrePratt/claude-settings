@@ -2,9 +2,11 @@
 
 ## Session Startup
 
-The SessionStart hook runs `bd prime` automatically. Then:
+Every session begins with this sequence:
 
 ```bash
+pwd                    # Confirm working directory
+bd prime               # Recover context
 bd ready --json        # Find available work
 git log --oneline -5   # Review recent state
 git status             # Verify clean state
