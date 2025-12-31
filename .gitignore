@@ -1,5 +1,6 @@
 # Runtime state
 debug/
+stats-cache.json
 downloads/
 file-history/
 ide/
