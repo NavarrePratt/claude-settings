@@ -8,7 +8,9 @@ See detailed rules in:
 
 # Quick Reference
 
-## Session Startup
+## Session Startup (User-Initiated Only)
+
+Run these commands ONLY when the user explicitly requests session initialization (e.g., "start session", "check for work", "what's ready?"). Do NOT run automatically after context compaction - if you were working on something before compaction, continue that work.
 
 ```bash
 pwd && bd prime && bd ready --json && git log --oneline -5 && git status
@@ -41,7 +43,7 @@ Track all work with `bd`. Create issues for test failures and bugs. Record metic
 
 # Session Protocol Summary
 
-**Startup**: `bd prime` -> `bd ready` -> review git state
+**Startup (user-initiated only)**: `bd prime` -> `bd ready` -> review git state. Do NOT run after context compaction.
 
 **Work**: One issue at a time. Commit after each. Verify end-to-end.
 

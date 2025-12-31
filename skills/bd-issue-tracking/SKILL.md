@@ -18,7 +18,9 @@ bd is a graph-based issue tracker providing persistent memory across sessions. U
 
 **Decision rule**: "If I need this context in 2 weeks after compaction, use bd"
 
-## Session Start
+## Session Start (User-Initiated Only)
+
+Run these ONLY when user explicitly requests session initialization. After context compaction, continue previous work instead of checking for new work.
 
 ```bash
 bd ready --json                              # Find available work

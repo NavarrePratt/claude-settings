@@ -1,8 +1,10 @@
 # Session Protocol
 
-## Session Startup
+## Session Startup (User-Initiated Only)
 
-Every session begins with this sequence:
+Run this sequence ONLY when the user explicitly requests it (e.g., "start session", "check for work").
+
+**After context compaction**: Do NOT treat compaction as a new session. If you were actively working on something, continue that work. The compaction summary will indicate what you were doing.
 
 ```bash
 pwd                    # Confirm working directory
