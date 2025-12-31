@@ -56,6 +56,23 @@ Before committing:
 - No hardcoded secrets or credentials
 - Changes are minimal and focused
 
+# Integration Test Verification
+
+After implementing changes that affect core functionality:
+
+1. **Check if integration tests need updates**: If you modified API behavior, added features,
+   or changed how existing functionality works, verify integration tests still pass
+2. **Update integration tests**: When tests use outdated patterns, update them to match
+   current API patterns
+3. **Run integration tests**: Execute the project's integration test command before closing
+   issues (check project CLAUDE.md for specific commands)
+4. **Add new integration tests**: When implementing new features that interact with external
+   services, add corresponding integration test coverage
+
+**Warning**: Do not get stuck in planning loops when tests fail. If integration tests fail
+after code changes, diagnose and fix them rather than reverting to planning mode repeatedly.
+Check test patterns match current API usage.
+
 # Code Style
 
 - Read before modifying: understand existing code first

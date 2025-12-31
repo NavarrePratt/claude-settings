@@ -51,5 +51,16 @@ NEXT: Immediate next step
 - Tests failing
 - Implementation partial
 - Unresolved errors
+- Integration tests not updated for API changes
+- New features lack integration test coverage (when applicable)
 
 Instead: `bd update bd-xxx --notes "BLOCKED: ..." --json`
+
+## Integration Test Requirements
+
+When closing issues that involve:
+- **API changes**: Verify existing integration tests still pass with new patterns
+- **New features**: Add integration tests if feature interacts with external services
+- **Bug fixes**: Add regression test if bug was user-facing
+
+Before closing: Run integration tests using project-specific command (check project CLAUDE.md)
