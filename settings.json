@@ -7,10 +7,17 @@
   },
   "includeCoAuthoredBy": false,
   "permissions": {
-    "additionalDirectories": ["/Users/npratt/git"],
-    "deny": ["mcp__codex__codex-reply"],
-    "defaultMode": "bypassPermissions"
+    "deny": [
+      "mcp__codex__codex-reply"
+    ],
+    "defaultMode": "bypassPermissions",
+    "additionalDirectories": [
+      "/Users/npratt/git"
+    ]
   },
   "model": "opus",
-  "alwaysThinkingEnabled": true
+  "alwaysThinkingEnabled": true,
+  "enabledPlugins": {
+    "gopls-lsp@claude-plugins-official": true
+  }
 }
