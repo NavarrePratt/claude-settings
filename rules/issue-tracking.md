@@ -26,6 +26,8 @@ EOF
 )" --json
 ```
 
+**CRITICAL: No ANSI escape codes in issues.** Never copy colored terminal output into titles or descriptions. Write text from scratch - paraphrase rather than copy. ANSI codes (`\x1b[`, `^[[`) stored in issues propagate to commit messages as garbage characters.
+
 ## Notes Format
 
 ```
