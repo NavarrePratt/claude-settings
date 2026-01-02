@@ -73,6 +73,15 @@ Before committing:
 - Use positive framing
 - Be concise
 
+# MCP Tools
+
+## Codex MCP
+
+When using the `mcp__codex__codex` tool for code reviews or other tasks:
+- Do NOT manually specify the `model` parameter unless the user explicitly requests a specific model
+- Let the global Codex configuration handle the default model selection
+- Only override the model when the command or user explicitly calls for it
+
 # Principals
 
 - Assumptions are the enemy. Never guess numerical values - benchmark instead of estimating. When uncertain, measure.
