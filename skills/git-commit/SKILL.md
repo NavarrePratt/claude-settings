@@ -151,6 +151,25 @@ Follow these seven rules for excellent commit messages (adjust for conventional 
    - Verify the commit with `git show`
 6. After all commits, run `git status` to verify nothing important was missed
 
+## ANSI Escape Code Prevention
+
+**CRITICAL**: Never include ANSI escape codes in commit messages. These codes appear as garbage characters like `^[[1m^[[30m` or `[0m[35m` in git logs.
+
+Common sources of escape codes:
+- CLI tool output with colors (bd, grep --color, ls --color)
+- Issue tracker descriptions that store colored text
+- Copying text from terminal output
+
+Prevention rules:
+1. **Never copy text directly** from colored CLI output into commit messages
+2. **Write commit messages from scratch** - describe changes in your own words
+3. **Avoid referencing issue descriptions verbatim** - paraphrase instead
+4. **If using CLI output for reference**, mentally extract the plain text meaning
+
+If you suspect escape codes may be present, the commit message will contain sequences like:
+- `\u001b[` or `\x1b[` (in source)
+- `^[[` (when viewed with `cat -v`)
+
 ## Notes
 
 - **ALWAYS check recent git history first** to determine if conventional commits are used
