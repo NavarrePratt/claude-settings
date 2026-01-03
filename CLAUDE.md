@@ -73,6 +73,17 @@ Before committing:
 - Use positive framing
 - Be concise
 
+# GitHub Interactions
+
+**NEVER post comments, replies, or any content to GitHub (PRs, issues, discussions) without explicit user approval.**
+
+Before submitting anything to the GitHub API:
+1. Show the user exactly what will be posted
+2. Wait for explicit approval (e.g., "yes", "go ahead", "post it")
+3. Only then execute the API call
+
+This applies to: PR comments, PR review replies, issue comments, and any other GitHub write operations.
+
 # MCP Tools
 
 ## Codex MCP
