@@ -84,6 +84,30 @@ Before submitting anything to the GitHub API:
 
 This applies to: PR comments, PR review replies, issue comments, and any other GitHub write operations.
 
+## Comment Formatting
+
+- Always prefix comments with `[via Claude]` to indicate they were written by Claude
+- When replying to an existing comment, post as a reply (not a new comment in the main thread)
+
+## Replying to PR Review Comments
+
+To reply to a PR review comment, use the `/replies` endpoint with the comment ID:
+
+```bash
+# CORRECT - posts as a reply to an existing comment
+gh api repos/OWNER/REPO/pulls/PR_NUMBER/comments/COMMENT_ID/replies \
+  -X POST -f body="[via Claude] Your reply here"
+
+# WRONG - posts as a new comment in the main thread
+gh api repos/OWNER/REPO/issues/PR_NUMBER/comments \
+  -X POST -f body="[via Claude] Your reply here"
+```
+
+To find comment IDs, fetch PR comments first:
+```bash
+gh api repos/OWNER/REPO/pulls/PR_NUMBER/comments --jq '.[] | {id, user: .user.login, body: .body[:80]}'
+```
+
 # MCP Tools
 
 ## Codex MCP
