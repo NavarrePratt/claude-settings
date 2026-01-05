@@ -1,6 +1,23 @@
 # Planning Bd Issues
 
-Review the conversation history above to identify work that needs planning. Extract requirements, decisions, and context discussed—these inform the bd issues you create. If the user provided additional instructions below, incorporate those as well.
+Plan and create bd issues for multi-step work requiring discovery and collaborative debate.
+
+## Context Sources
+
+This command receives context from two sources:
+1. **Conversation history** - All messages above inform requirements, decisions, and scope
+2. **Arguments** - Additional instructions passed when invoking the command (see $ARGUMENTS at end)
+
+## Tools Used
+
+- **Task (Explore subagent)** - Codebase exploration with model: "haiku"
+- **Task (Plan subagent)** - Implementation design with model: "haiku"
+- **mcp__codex__codex** - Cross-reference discovery with model: "gpt-5.1-codex-mini"
+- **bd CLI** - Issue creation, status management, and dependencies
+
+---
+
+## Overview
 
 This is a two-phase process: discovery first, then planning with collaborative debate.
 
@@ -101,10 +118,6 @@ Claude (Haiku) and Codex (gpt-5.1-codex-mini) debate back-and-forth to refine th
   ```
 - If consensus: Proceed. If disagreement on implementation detail: Choose simpler/safer option, note as future optimization.
 
-**Round 4 - Escalation** (only if Round 3 has unresolved critical issues):
-- Re-examine discovery findings to identify which assumptions caused the conflict.
-- Choose the approach with fewer unknowns. Document the trade-off explicitly.
-
 ### Quality Gate
 Before creating issues, confirm:
 - [ ] All discovered edge cases addressed or explicitly deferred with rationale
@@ -156,14 +169,6 @@ After creating all implementation issues, create one final bd issue to run the f
    Use `bd dep add <final-issue> <implementation-issue> --type blocks` for EACH implementation issue.
    This ensures the final verification runs only after all implementation work is complete.
 
-Example:
-```bash
-# If implementation issues are bd-001, bd-002, bd-003 and final is bd-004:
-bd dep add bd-004 bd-001 --type blocks
-bd dep add bd-004 bd-002 --type blocks
-bd dep add bd-004 bd-003 --type blocks
-```
-
 ### Step 5: Create Epic
 
 After all issues are created and dependencies set, create a bd epic as a summary of the planned work:
@@ -177,7 +182,6 @@ bd create "[feature/task name]" --type epic --description "$(cat <<'EOF'
 [What this epic covers]
 
 # Implementation Issues
-- bd-xxx: [issue title]
 - bd-xxx: [issue title]
 - bd-xxx: [issue title]
 - bd-xxx: Run full E2E/integration test suite (final verification)
@@ -199,7 +203,6 @@ EOF
 
 Link all created issues to the epic as children:
 ```bash
-bd dep add bd-xxx <epic-id> --type parent-child
 bd dep add bd-xxx <epic-id> --type parent-child
 # ... repeat for each implementation issue
 ```
@@ -235,5 +238,9 @@ When discovery or planning reveals blocking issues:
    - Instruction to use Plan subagent to design fix
    - Instruction to create implementation bd issues via bd-issue-tracking skill
 3. Any implementation issues spawned from meta issues are also P0
+
+---
+
+## Additional Instructions
 
 $ARGUMENTS

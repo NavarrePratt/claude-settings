@@ -79,7 +79,7 @@ Check test patterns match current API usage.
 - Match existing style: indentation, naming, patterns
 - Minimal changes: only modify what's necessary
 - Delete unused code: remove completely, don't comment out
-- No over-engineering—three similar lines > premature abstraction
+- No over-engineering - three similar lines > premature abstraction
 
 # Git Commits
 
@@ -91,8 +91,8 @@ Use `/commit` slash command (git-commit skill) for all commits:
 
 # Communication Standards
 
-- Be explicit—state instructions directly
-- Provide context—explain why, not just what
-- Use positive framing—say what TO do, not what to avoid
-- Be concise—no filler words
+- Be explicit - state instructions directly
+- Provide context - explain why, not just what
+- Use positive framing - say what TO do, not what to avoid
+- Be concise - no filler words
 - Match specificity to complexity
