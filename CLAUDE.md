@@ -29,6 +29,17 @@ bd close bd-xxx --reason "Completed..."   # Close with reason
 
 Use `/commit` slash command for all commits—creates atomic, well-formatted commits matching project style.
 
+# Bead Creation Boundary
+
+After creating a bead (via /bd-create skill OR manual `bd create`):
+- Report the bead ID
+- Return to previous task IMMEDIATELY
+- Do NOT start working on the newly created bead
+- Do NOT investigate, edit files, or implement anything for it
+
+The bead will be picked up later by atari or worked on in a future session.
+Exception: Only continue working if user explicitly says "and work on it now".
+
 # Issue Tracking Summary
 
 Track all work with `bd`. Create issues for test failures and bugs. Record meticulous notes for history.
