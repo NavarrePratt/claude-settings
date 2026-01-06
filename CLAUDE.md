@@ -117,7 +117,6 @@ When using the `mcp__codex__codex` tool for code reviews or other tasks:
 - **Constraint persistence**: When user defines constraints ("never X", "always Y", "from now on"), immediately persist to projects local
   CLAUDE.md. Acknowledge, write, confirm.
 
-
 <atari-managed>
 # BD Integration
 
@@ -169,6 +168,15 @@ Track all work with `bd`. Create issues for test failures and bugs. Record metic
 **Work**: One issue at a time. Commit after each. Verify end-to-end.
 
 **Completion**: File remaining work as issues. Close completed issues. Push to remote.
+
+## CRITICAL: Bead Closure
+
+**You MUST close or reset beads before ending your session.** Beads left in_progress get stuck forever.
+
+- Work complete: `bd close bd-xxx --reason "Completed: ..."`
+- Work incomplete: `bd update bd-xxx --status open --notes "Needs: ..."`
+
+Never leave beads in_progress.
 
 ## Quality Gates
 
