@@ -8,23 +8,6 @@ See detailed rules in:
 
 # Quick Reference
 
-## Session Startup (User-Initiated Only)
-
-Run these commands ONLY when the user explicitly requests session initialization (e.g., "start session", "check for work", "what's ready?"). Do NOT run automatically after context compaction - if you were working on something before compaction, continue that work.
-
-```bash
-pwd && bd prime && bd ready --json && git log --oneline -5 && git status
-```
-
-## Issue Workflow
-
-```bash
-bd ready --json                           # Find work
-bd update bd-xxx --status in_progress     # Claim it
-# ... do work ...
-bd close bd-xxx --reason "Completed..."   # Close with reason
-```
-
 ## Git Commits
 
 Use `/commit` slash command for all commits—creates atomic, well-formatted commits matching project style.
@@ -51,14 +34,6 @@ Track all work with `bd`. Create issues for test failures and bugs. Record metic
 **Closing issues**: Always provide `--reason` with what was done and how verified. Never close if tests fail or implementation is partial.
 
 **Dependencies**: `bd dep add A B --type blocks` means A must complete before B.
-
-# Session Protocol Summary
-
-**Startup (user-initiated only)**: `bd prime` -> `bd ready` -> review git state. Do NOT run after context compaction.
-
-**Work**: One issue at a time. Commit after each. Verify end-to-end.
-
-**Completion**: File remaining work as issues. Close completed issues. Push to remote.
 
 # Quality Gates
 
@@ -143,6 +118,7 @@ When using the `mcp__codex__codex` tool for code reviews or other tasks:
   CLAUDE.md. Acknowledge, write, confirm.
 
 
+<atari-managed>
 # BD Integration
 
 Use the bd CLI to track work across sessions.
@@ -201,3 +177,4 @@ Before committing:
 - All tests pass
 - No hardcoded secrets
 - Changes are minimal and focused
+</atari-managed>
