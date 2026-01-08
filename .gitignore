@@ -1,4 +1,6 @@
 # Runtime state
+cache/
+paste-cache/
 debug/
 stats-cache.json
 downloads/
