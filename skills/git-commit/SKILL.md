@@ -155,20 +155,41 @@ Follow these seven rules for excellent commit messages (adjust for conventional 
 
 **CRITICAL**: Never include ANSI escape codes in commit messages. These codes appear as garbage characters like `^[[1m^[[30m` or `[0m[35m` in git logs.
 
-Common sources of escape codes:
+### Root Cause
+
+The Bash tool applies syntax highlighting to heredoc content. This means using patterns like:
+```bash
+git commit -m "$(cat <<'EOF'
+fix: some message with keywords like for, if, and, in
+EOF
+)"
+```
+Will embed ANSI codes around Python/shell keywords (`for`, `if`, `and`, `in`, etc.) and punctuation.
+
+### Required Workaround
+
+**Always use the Write tool + git commit -F pattern:**
+
+1. Use the Write tool to create `.git/COMMIT_MSG_TMP` with the message content
+2. Run `git commit -F .git/COMMIT_MSG_TMP` (or `git commit --amend -F .git/COMMIT_MSG_TMP`)
+
+**Never use:**
+- `git commit -m "$(cat <<'EOF'...)"` - heredoc content gets syntax highlighted
+- `git commit -m "multi-line message"` - same issue
+
+### Other Sources of Escape Codes
+
 - CLI tool output with colors (bd, grep --color, ls --color)
 - Issue tracker descriptions that store colored text
 - Copying text from terminal output
 
-Prevention rules:
-1. **Never copy text directly** from colored CLI output into commit messages
-2. **Write commit messages from scratch** - describe changes in your own words
-3. **Avoid referencing issue descriptions verbatim** - paraphrase instead
-4. **If using CLI output for reference**, mentally extract the plain text meaning
+### Verification
 
-If you suspect escape codes may be present, the commit message will contain sequences like:
-- `\u001b[` or `\x1b[` (in source)
-- `^[[` (when viewed with `cat -v`)
+After committing, verify no escape codes with:
+```bash
+git log -1 --format=%B | od -c | head -20
+```
+Look for `033 [` sequences which indicate ANSI codes. Clean commits show only printable ASCII.
 
 ## Notes
 
