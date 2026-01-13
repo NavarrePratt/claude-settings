@@ -29,8 +29,17 @@ Extract owner and repo from various formats:
 ls ~/.cache/claude/repos/<owner>/<repo>/
 ```
 
-- **If exists**: Check if update needed (see `update-reference.md`)
-- **If not exists**: Proceed to clone
+- **If not cached**: Proceed to clone (step 3)
+- **If cached and user specified a version/tag**: Proceed to version detection (step 4)
+- **If cached and no version specified**: Update to latest default branch before exploring:
+  ```bash
+  cd ~/.cache/claude/repos/<owner>/<repo>
+  git fetch --all --tags
+  DEFAULT_BRANCH=$(git rev-parse --abbrev-ref origin/HEAD | sed 's|origin/||')
+  git checkout "$DEFAULT_BRANCH" && git pull origin "$DEFAULT_BRANCH"
+  ```
+
+**Note**: Auto-updating ensures exploration shows current code rather than stale cached versions. Specific versions are handled in step 4.
 
 ### 3. Clone Repository
 
