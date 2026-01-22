@@ -127,13 +127,12 @@ Before creating issues, confirm:
 
 ### Step 3: Create Issues (Deferred)
 
-Create issues using the issue-tracking skill. **Immediately set each to deferred status** to prevent atari from picking them up before planning is complete.
+Create issues using the issue-tracking skill with `--status deferred` to prevent atari from picking them up before planning is complete.
 
 For each issue:
 ```bash
-id=$(br create "Title" --description "..." --json | jq -r '.id')
-br update $id --status deferred
-# Track the ID for later publishing
+br create "Title" --status deferred --description "..." --json
+# Track the IDs for later publishing
 ```
 
 Each issue must:
@@ -156,10 +155,9 @@ Each issue must:
 
 After creating all implementation issues, create one final issue to run the full test suite:
 
-1. **Create the issue** (also set to deferred):
+1. **Create the issue** with deferred status:
    ```bash
-   final_id=$(br create "Run full test suite for [feature] (final verification)" --description "..." --json | jq -r '.id')
-   br update $final_id --status deferred
+   br create "Run full test suite for [feature] (final verification)" --status deferred --description "..." --json
    ```
    - Description: Verify all changes work together by running the complete test suite
    - Include the discovered e2e/integration command from Phase 1
@@ -171,10 +169,15 @@ After creating all implementation issues, create one final issue to run the full
 
 ### Step 5: Create Epic
 
-After all issues are created and dependencies set, create an epic as a summary of the planned work:
+After all issues are created and dependencies set, create an epic as a summary of the planned work.
+
+**Epic Priority and Selection Mode**: When atari uses `selection_mode: top-level` (the default), epics compete by priority. The epic with the **lowest priority number** (highest priority) gets all its work done first before moving to the next epic. Set epic priority based on when you want this work completed relative to other epics:
+- P0-P1: Urgent work that should be done before other planned work
+- P2 (default): Normal priority, processed in creation order among equals
+- P3-P4: Lower priority, will be worked after higher-priority epics complete
 
 ```bash
-br create "[feature/task name]" --type epic --description "$(cat <<'EOF'
+br create "[feature/task name]" --type epic --priority <N> --description "$(cat <<'EOF'
 # Overview
 [Brief description of the overall work being planned]
 
