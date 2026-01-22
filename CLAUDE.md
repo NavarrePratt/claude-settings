@@ -3,7 +3,7 @@
 This file documents workflow standards, issue tracking practices, and code quality expectations.
 
 See detailed rules in:
-- @rules/issue-tracking.md - bd CLI patterns and issue management
+- @rules/issue-tracking.md - br CLI patterns and issue management
 - @rules/session-protocol.md - Session procedures and quality gates
 
 # Quick Reference
@@ -14,7 +14,7 @@ Use `/commit` slash command for all commits—creates atomic, well-formatted com
 
 # Bead Creation Boundary
 
-After creating a bead (via /bd-create skill OR manual `bd create`):
+After creating a bead (via /issue-create skill OR manual `br create`):
 - Report the bead ID
 - Return to previous task IMMEDIATELY
 - Do NOT start working on the newly created bead
@@ -25,7 +25,7 @@ Exception: Only continue working if user explicitly says "and work on it now".
 
 # Issue Tracking Summary
 
-Track all work with `bd`. Create issues for test failures and bugs. Record meticulous notes for history.
+Track all work with `br`. Create issues for test failures and bugs. Record meticulous notes for history.
 
 **Priority levels**: 0=critical, 1=high, 2=normal, 3=low, 4=backlog
 
@@ -33,7 +33,7 @@ Track all work with `bd`. Create issues for test failures and bugs. Record metic
 
 **Closing issues**: Always provide `--reason` with what was done and how verified. Never close if tests fail or implementation is partial.
 
-**Dependencies**: `bd dep add A B --type blocks` means A must complete before B.
+**Dependencies**: `br dep add A B --type blocks` means A must complete before B.
 
 # Quality Gates
 

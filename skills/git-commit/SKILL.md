@@ -179,7 +179,7 @@ Will embed ANSI codes around Python/shell keywords (`for`, `if`, `and`, `in`, et
 
 ### Other Sources of Escape Codes
 
-- CLI tool output with colors (bd, grep --color, ls --color)
+- CLI tool output with colors (br, grep --color, ls --color)
 - Issue tracker descriptions that store colored text
 - Copying text from terminal output
 
