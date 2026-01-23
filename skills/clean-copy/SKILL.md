@@ -45,7 +45,3 @@ git commit history suitable for reviewer comprehension.
    - Run: `git diff {original_branch}..{branch_name}-clean` (should be empty).
    - Use `--no-verify` only when necessary to bypass known issues.
 
-7. **Open a pull request**
-   - Create a PR from the clean branch to `main`.
-   - Title and body should summarize the feature/fix.
-   - Include a link to the original branch for reference.
