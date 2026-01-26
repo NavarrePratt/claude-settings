@@ -9,22 +9,9 @@ Thorough code review of all commits on the current branch compared to main using
 
 ## Context
 
+- Working directory: !`pwd`
 - Current branch: !`git branch --show-current`
-- Base branch: !`git merge-base HEAD origin/main 2>/dev/null || git merge-base HEAD main 2>/dev/null || echo "main"`
-- Commits on branch: !`git log --oneline $(git merge-base HEAD origin/main 2>/dev/null || git merge-base HEAD main 2>/dev/null)..HEAD`
-- Files changed: !`git diff --stat $(git merge-base HEAD origin/main 2>/dev/null || git merge-base HEAD main 2>/dev/null)..HEAD`
-
-## Branch Diff
-
-```
-!`git diff $(git merge-base HEAD origin/main 2>/dev/null || git merge-base HEAD main 2>/dev/null)..HEAD`
-```
-
-## Commit Messages
-
-```
-!`git log --format="commit %h%nAuthor: %an%nDate: %ad%n%n%s%n%b%n---" $(git merge-base HEAD origin/main 2>/dev/null || git merge-base HEAD main 2>/dev/null)..HEAD`
-```
+- Base commit: !`git merge-base HEAD origin/main 2>/dev/null || git merge-base HEAD main 2>/dev/null || echo "main"`
 
 ## Instructions
 
@@ -32,19 +19,44 @@ You are conducting a rigorous code review of all changes on this branch using th
 
 ### Step 1: Initial Review Request
 
-Call `mcp__codex__codex` with a prompt containing:
+Call `mcp__codex__codex` with these parameters:
+- `sandbox`: `read-only`
+- `approval-policy`: `never`
+- `cwd`: The current working directory (ensures Codex operates in the correct repo)
+- `prompt`: The review prompt below (substitute BRANCH_NAME and BASE_COMMIT from Context above)
 
-1. The review criteria below
-2. The full branch diff from the Context section above
-3. The commit messages for context on intent
-4. Clear response format instructions
-
-**Review Criteria to Include:**
+**Review Prompt for Codex:**
 
 ```
-You are a senior code reviewer conducting a thorough pre-PR review. Analyze the following branch diff with extreme rigor. This represents all changes on a feature branch that will be merged to main.
+You are a senior code reviewer conducting a thorough pre-PR review of a feature branch.
 
-Consider both individual changes AND the branch as a whole:
+Branch: BRANCH_NAME
+Base: BASE_COMMIT
+
+## Your Task
+
+You have full git access. Gather the diff yourself to handle branches of any size.
+
+### Step 1: Assess Scope
+
+Run these commands to understand the branch:
+- `git log --oneline BASE_COMMIT..HEAD` - see all commits
+- `git diff --stat BASE_COMMIT..HEAD` - see files changed and line counts
+
+### Step 2: Gather and Review
+
+**For large branches (>500 lines changed or >10 files):**
+Review incrementally to avoid overwhelming context:
+- Review commit-by-commit: `git show <commit_hash>`
+- Or review by file: `git diff BASE_COMMIT..HEAD -- <filepath>`
+- Focus on the most critical/complex files first
+
+**For smaller branches:**
+- `git diff BASE_COMMIT..HEAD` - review the full diff
+
+### Step 3: Apply Review Criteria
+
+Evaluate against these criteria:
 
 1. **Correctness**: Logic errors, off-by-one bugs, incorrect assumptions
 2. **Security**: Injection risks, auth gaps, input validation, data exposure
@@ -55,6 +67,8 @@ Consider both individual changes AND the branch as a whole:
 7. **Testing**: Testability, obvious missing test cases
 8. **Architecture**: Does the overall approach make sense? Are there better patterns?
 9. **Commit Hygiene**: Are commits atomic and well-described? Should any be squashed or split?
+
+### Output Format
 
 For each issue found, provide:
 - File: path and line number
@@ -82,13 +96,13 @@ If Codex responds with "NEEDS REVISION":
 
 ### Step 3: Re-Review Loop
 
-After making fixes, call `mcp__codex__codex` again with:
+After making fixes, call `mcp__codex__codex` again with the same parameters and a prompt containing:
 
-1. Statement: "Review iteration [N]"
+1. Statement: "Review iteration [N] - re-reviewing after fixes"
 2. List of issues addressed and how each was fixed
 3. Any disagreements with reasoning
-4. The updated branch diff: !`git diff $(git merge-base HEAD origin/main 2>/dev/null || git merge-base HEAD main 2>/dev/null)..HEAD`
-5. Same response format instructions (APPROVED/NEEDS REVISION)
+4. Instructions to re-run git diff to see the updated state
+5. Same review criteria and response format (APPROVED/NEEDS REVISION)
 
 **Repeat Steps 2-3 until:**
 - Codex responds with "APPROVED", OR
@@ -130,12 +144,20 @@ Produce this summary:
 
 ## Guidelines
 
+- **Let Codex gather diffs**: Do not embed diffs in the prompt - Codex will run git commands itself
+- **Always set cwd**: Pass the working directory to ensure Codex operates in the correct repository
 - **Review the whole branch**: Consider how all commits work together, not just individual changes
-- **Always re-review after fixes**: Include all changes in the re-review request
+- **Always re-review after fixes**: Codex should re-run git diff to see updated state
 - **Preserve user intent**: Address concerns without changing the fundamental approach
 - **Document disagreements**: If you think an issue is a false positive, explain why in the re-review and summary
 - **Show your work**: The user should see exactly what changed and why
 - **Handle errors**: If the Codex tool fails, report the error and stop
 - **Commit hygiene**: If fixes are made, suggest whether to amend or create fixup commits
+
+## Notes
+
+- Each Codex call is a fresh session. Re-review prompts must include context about what changed.
+- The `read-only` sandbox allows git commands but prevents file modifications by Codex itself.
+- File edits are made by Claude (the outer agent) using the Edit tool, not by Codex.
 
 $ARGUMENTS
