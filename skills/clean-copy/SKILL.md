@@ -30,6 +30,8 @@ git commit history suitable for reviewer comprehension.
    - Each step should reflect a logical stage of development, as if writing a
      tutorial.
    - Order commits so each builds naturally on the previous.
+   - **Present the plan to the user and wait for explicit approval before
+     proceeding to step 5.**
 
 5. **Reimplement the work**
    - Recreate the changes in the clean branch, committing step by step
@@ -38,10 +40,19 @@ git commit history suitable for reviewer comprehension.
      - Introduce a single coherent idea.
      - Include a clear commit message and description.
      - Be atomic: tests should pass (when possible) at each commit.
+   - **CRITICAL: If you encounter complexity or blockers that make the approved
+     plan difficult to execute, STOP and consult the user. Do NOT modify the
+     plan or change approach without explicit user approval.**
 
 6. **Verify correctness**
    - Confirm that the final state of `{branch_name}-clean` exactly matches the
      final state of the original branch.
    - Run: `git diff {original_branch}..{branch_name}-clean` (should be empty).
    - Use `--no-verify` only when necessary to bypass known issues.
+
+### Constraints
+
+- **Never modify the commit plan after approval without user consent.**
+- **If implementation becomes complex or problematic, ask the user how to
+  proceed rather than changing approach autonomously.**
 
