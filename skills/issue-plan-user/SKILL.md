@@ -1,6 +1,6 @@
-# Planning Issues
+# User Interview Planning
 
-Plan and create issues for multi-step work requiring discovery and collaborative debate.
+Plan work by interviewing the user in-depth about their plans using probing, non-obvious questions.
 
 ## Context Sources
 
@@ -10,25 +10,111 @@ This command receives context from two sources:
 
 ## Tools Used
 
-- **Task (Explore subagent)** - Codebase exploration with model: "haiku"
-- **Task (Plan subagent)** - Implementation design with model: "haiku"
-- **mcp__codex__codex** - Cross-reference discovery with model: "gpt-5.1-codex-mini"
-- **br CLI** - Issue creation, status management, and dependencies
+- **AskUserQuestion** - Primary tool for in-depth user interviews
+- **Task (Explore subagent)** - Codebase exploration to inform questions
+- **br CLI** - Issue creation after planning is complete
 
 ---
 
 ## Overview
 
-This is a two-phase process: discovery first, then planning with collaborative debate.
+This is an interactive planning process where you interview the user to fully flesh out their plan before creating beads. Unlike issue-plan and issue-plan-codex which use AI-to-AI debate, this command uses direct user dialogue to refine requirements.
 
-## Phase 1: Discovery
+## Step 1: Understand the Plan
 
-Use BOTH approaches for comprehensive discovery:
+Review the entire conversation to understand what plan is being discussed. Identify:
+- The core goal or feature being planned
+- Any constraints or requirements already mentioned
+- Technical context from prior discussion
+- Open questions or unclear areas
 
-### Claude Explore Agents
-Use the Explore subagent with "very thorough" setting and **model: "haiku"** to understand:
-1. All code related to this work (run up to 3 parallel explorations)
-2. Current architecture, patterns, and conventions
+## Step 2: Initial Exploration (Optional)
+
+If the plan involves code changes and you need context to ask better questions, run a **quick** Explore query (model: "haiku") to understand:
+- Relevant existing code and patterns
+- How similar features are implemented
+- Potential integration points
+
+Skip this step if the conversation already provides sufficient technical context.
+
+## Step 3: Interview the User
+
+Interview the user about this plan in detail using the AskUserQuestion tool. Probe across multiple dimensions:
+
+**Technical implementation:**
+- How should this integrate with existing code?
+- What patterns or conventions should it follow?
+- Are there performance considerations?
+
+**UI and UX (if applicable):**
+- How should users interact with this?
+- What feedback should the system provide?
+- What happens in error states?
+
+**Scope and boundaries:**
+- What is explicitly out of scope?
+- Are there phases or increments to consider?
+- What is the minimum viable implementation?
+
+**Edge cases and assumptions:**
+- What inputs or states could cause problems?
+- What assumptions are we making about the environment?
+- How should the system behave in unexpected situations?
+
+**Risks and dependencies:**
+- What could go wrong?
+- What does this depend on?
+- What other work might be affected?
+
+**Testing and verification:**
+- How will we know this works correctly?
+- What should be tested manually vs automatically?
+- Are there integration concerns?
+
+### Interview Guidelines
+
+- **Ask non-obvious questions** - Probe deeper into things the user might not have considered
+- **Challenge assumptions** - Question unstated beliefs about how things should work
+- **Ask about the hard parts** - Focus on areas that seem complex or risky
+- **Use multiple rounds** - Continue interviewing until the plan is fully fleshed out
+- **Be very in-depth** - This is not a superficial checklist; dig into specifics
+
+### Using AskUserQuestion Effectively
+
+Structure questions with clear options when possible:
+```
+questions:
+  - question: "How should errors be surfaced to the user?"
+    header: "Error UX"
+    options:
+      - label: "Toast notification"
+        description: "Non-blocking notification that auto-dismisses"
+      - label: "Modal dialog"
+        description: "Blocking dialog requiring user acknowledgment"
+      - label: "Inline error"
+        description: "Error displayed next to the relevant input"
+      - label: "Status bar"
+        description: "Persistent status area showing current state"
+    multiSelect: false
+```
+
+For open-ended questions, provide example answers as options with "Other" for custom input.
+
+## Step 4: Synthesize the Plan
+
+After the interview is complete, synthesize everything discussed into a comprehensive plan:
+
+1. **Summary** - What we are building and why
+2. **Scope** - What is included and excluded
+3. **Technical approach** - How it will be implemented
+4. **Key decisions** - Important choices made during the interview
+5. **Edge cases addressed** - How we handle unusual situations
+6. **Testing strategy** - How we verify correctness
+7. **Risks and mitigations** - What could go wrong and how we prevent it
+
+Present this synthesis to the user and confirm it accurately captures the plan.
+
+## Step 5: Discover Verification Commands
 
 ### Discover Verification Commands
 
@@ -66,68 +152,11 @@ Output format: "CATEGORY: [exact command]"
 Stop searching a category once you find an authoritative source.
 ```
 
-### Codex Discovery
-Use the codex MCP tool for additional discovery:
-```
-mcp__codex__codex with model: "gpt-5.1-codex-mini"
-prompt: "Explore [topic]. Find all relevant code, patterns, edge cases, and potential issues. Report findings comprehensively."
-```
-Cross-reference Codex findings with Explore results to ensure nothing is missed.
+## Step 6: Create Beads
 
-## Phase 1.5: Discovery Synthesis
+### Create Issues (Deferred)
 
-Before planning, consolidate findings into a brief summary:
-- **Architecture overview**: Key patterns, conventions, and constraints discovered
-- **Testing setup**: Where tests live, how to run them, what coverage exists
-- **Verification commands**: Exact commands for lint, static analysis, test, e2e (from discovery)
-- **Known risks**: Edge cases, gotchas, or blockers identified during discovery
-
-This summary becomes the input for Phase 2.
-
-## Phase 2: Planning with Collaborative Debate
-
-Use multi-round refinement for thorough planning:
-
-### Step 1: Initial Plan
-Use the Plan subagent with **model: "haiku"** to design implementation approach based on discovery synthesis.
-
-### Step 2: Collaborative Debate (2-4 rounds, until consensus or escalation)
-Claude (Haiku) and Codex (gpt-5.1-codex-mini) debate back-and-forth to refine the plan:
-
-**Round 1 - Dual Critique**:
-- **Claude (Haiku)**: List 5-10 specific gaps, risks, or edge cases in the plan. For each, explain why it matters.
-- **Codex**: Use `mcp__codex__codex` with model "gpt-5.1-codex-mini":
-  ```
-  prompt: "Review this implementation plan: [plan]. List 5-10 specific gaps, conflicts, or risks. For each issue: (1) What could break? (2) What assumption might be wrong? (3) Suggest a concrete mitigation."
-  ```
-- Synthesize both critiques. If >3 critical issues overlap, they are high-priority fixes.
-
-**Round 2 - Address & Counter**:
-- **Claude (Haiku)**: Propose specific revisions for each Round 1 concern. State which you accept, reject (with rationale), or defer.
-- **Codex**: Use `mcp__codex__codex` with model "gpt-5.1-codex-mini":
-  ```
-  prompt: "Claude proposes these revisions: [revisions]. For each: (1) Does it actually solve the concern? (2) What breaks if Claude's assumption is wrong? (3) Suggest 1-2 concrete alternatives for weak points."
-  ```
-- Integrate valid counterpoints. If fundamental disagreement on architecture, pause and re-examine discovery findings.
-
-**Round 3 - Final Consensus** (skip if Round 2 achieved consensus):
-- **Claude (Haiku)**: Present refined plan with all incorporated feedback. List any unresolved disagreements.
-- **Codex**: Use `mcp__codex__codex` with model "gpt-5.1-codex-mini":
-  ```
-  prompt: "Final plan review: [plan]. Verify: (1) All discovered edge cases addressed or explicitly deferred? (2) Error/failure paths defined? (3) Testing strategy clear? (4) Dependencies sequenced correctly? List any gaps."
-  ```
-- If consensus: Proceed. If disagreement on implementation detail: Choose simpler/safer option, note as future optimization.
-
-### Quality Gate
-Before creating issues, confirm:
-- [ ] All discovered edge cases addressed or explicitly deferred with rationale
-- [ ] Error paths defined (what happens when X fails?)
-- [ ] Testing strategy covers new code
-- [ ] Trade-offs documented with reasoning
-
-### Step 3: Create Issues (Deferred)
-
-Create issues using the issue-tracking skill with `--status deferred` to prevent atari from picking them up before planning is complete.
+Create issues using `br create` with `--status deferred` to prevent atari from picking them up before planning is complete.
 
 For each issue:
 ```bash
@@ -151,7 +180,7 @@ Each issue must:
 
 **Track all created issue IDs** for the publish step.
 
-### Step 4: Final Verification Issue (Deferred)
+### Final Verification Issue (Deferred)
 
 After creating all implementation issues, create one final issue to run the full test suite:
 
@@ -167,7 +196,15 @@ After creating all implementation issues, create one final issue to run the full
    Use `br dep add <final-issue> <implementation-issue> --type blocks` for EACH implementation issue.
    This ensures the final verification runs only after all implementation work is complete.
 
-### Step 5: Create Epic
+Example:
+```bash
+# If implementation issues are bd-001, bd-002, bd-003 and final is bd-004:
+br dep add bd-004 bd-001 --type blocks
+br dep add bd-004 bd-002 --type blocks
+br dep add bd-004 bd-003 --type blocks
+```
+
+### Create Epic
 
 After all issues are created and dependencies set, create an epic as a summary of the planned work.
 
@@ -212,7 +249,7 @@ br dep add bd-xxx <epic-id> --type parent-child
 
 Check epic progress: `br epic status`
 
-### Step 6: Publish All Beads
+### Publish All Beads
 
 After the epic is created and all dependencies are set, publish all beads by transitioning them from deferred to open status. This makes them available to `br ready` and atari.
 
@@ -231,16 +268,25 @@ done
 
 This ensures atari will not pick up any beads until the entire plan is ready and properly sequenced.
 
-## Handling Failures
+## Step 7: Output Summary
 
-When discovery or planning reveals blocking issues:
-1. Create a P0 meta issue titled: "Create plan for [blocker-topic]"
-2. Description must include:
-   - What was blocking and why it matters
-   - Instruction to use Explore subagent for discovery
-   - Instruction to use Plan subagent to design fix
-   - Instruction to create implementation issues via issue-tracking skill
-3. Any implementation issues spawned from meta issues are also P0
+After creating and publishing beads, output a clear summary:
+
+```
+Created X bead(s) from user interview:
+
+- bd-xxx: [title] (P2, open)
+- bd-xxx: [title] (P2, open, blocked by bd-xxx)
+- bd-xxx: [title] - final verification (P2, open, blocked by all above)
+
+Epic: bd-xxx - [epic title]
+
+Key decisions from interview:
+- [Decision 1]
+- [Decision 2]
+
+Ready for implementation.
+```
 
 ---
 

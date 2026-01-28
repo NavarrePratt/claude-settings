@@ -1,4 +1,4 @@
-# Planning Issues (Ultra)
+# Planning Issues (Codex)
 
 Plan and create issues for complex work requiring thorough discovery and multi-round collaborative debate.
 
@@ -129,15 +129,14 @@ Before creating issues, confirm:
 - [ ] Testing strategy covers new code
 - [ ] Trade-offs documented with reasoning
 
-### Step 3: Create Issues (Deferred)
+### Create Issues (Deferred)
 
-Create issues using the issue-tracking skill. **Immediately set each to deferred status** to prevent atari from picking them up before planning is complete.
+Create issues using `br create` with `--status deferred` to prevent atari from picking them up before planning is complete.
 
 For each issue:
 ```bash
-id=$(br create "Title" --description "..." --json | jq -r '.id')
-br update $id --status deferred
-# Track the ID for later publishing
+br create "Title" --status deferred --description "..." --json
+# Track the IDs for later publishing
 ```
 
 Each issue must:
@@ -156,14 +155,13 @@ Each issue must:
 
 **Track all created issue IDs** for the publish step.
 
-### Step 4: Final Verification Issue (Deferred)
+### Final Verification Issue (Deferred)
 
 After creating all implementation issues, create one final issue to run the full test suite:
 
-1. **Create the issue** (also set to deferred):
+1. **Create the issue** with deferred status:
    ```bash
-   final_id=$(br create "Run full test suite for [feature] (final verification)" --description "..." --json | jq -r '.id')
-   br update $final_id --status deferred
+   br create "Run full test suite for [feature] (final verification)" --status deferred --description "..." --json
    ```
    - Description: Verify all changes work together by running the complete test suite
    - Include the discovered e2e/integration command from Phase 1
@@ -181,7 +179,7 @@ br dep add bd-004 bd-002 --type blocks
 br dep add bd-004 bd-003 --type blocks
 ```
 
-### Step 5: Create Epic
+### Create Epic
 
 After all issues are created and dependencies set, create an epic as a summary of the planned work.
 
@@ -199,7 +197,6 @@ br create "[feature/task name]" --type epic --priority <N> --description "$(cat 
 [What this epic covers]
 
 # Implementation Issues
-- bd-xxx: [issue title]
 - bd-xxx: [issue title]
 - bd-xxx: [issue title]
 - bd-xxx: Run full E2E/integration test suite (final verification)
@@ -222,13 +219,12 @@ EOF
 Link all created issues to the epic as children:
 ```bash
 br dep add bd-xxx <epic-id> --type parent-child
-br dep add bd-xxx <epic-id> --type parent-child
 # ... repeat for each implementation issue
 ```
 
 Check epic progress: `br epic status`
 
-### Step 6: Publish All Beads
+### Publish All Beads
 
 After the epic is created and all dependencies are set, publish all beads by transitioning them from deferred to open status. This makes them available to `br ready` and atari.
 
