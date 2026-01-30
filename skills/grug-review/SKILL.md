@@ -1,4 +1,5 @@
 ---
+name: grug-review
 description: Review code with grug-brain anti-complexity philosophy. Use when reviewing PRs, diffs, or code changes to identify unnecessary complexity.
 ---
 
