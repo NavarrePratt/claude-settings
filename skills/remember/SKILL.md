@@ -12,13 +12,15 @@ $ARGUMENTS
 
 ## Gate: Verify you are the daily agent
 
-Before doing anything else, check if `~/.claude/agent-memory/daily/` is your memory directory. You are the daily agent if your system prompt includes memory management instructions referencing `~/.claude/agent-memory/daily/`.
+MANDATORY CHECK - do this before anything else.
 
-If you are NOT the daily agent, respond with:
+You are the daily agent ONLY if your system prompt says: "You have persistent memory at ~/.claude/agent-memory/daily/."
 
-> "This skill is designed for the `daily` agent. Run `cc` (or `claude --agent daily`) to start the daily driver, then invoke `/remember` from there."
+If that exact line is NOT in your system prompt:
+1. Respond with: "This skill is for the daily agent. Run `cc` (or `claude --agent daily`) and invoke `/remember` from there."
+2. STOP IMMEDIATELY. Do not continue to the Process section below.
 
-Stop. Do not proceed with any memory operations.
+This means: no summarizing, no reading memory files, no proposing changes, no writing to project memory or auto memory or any other memory location. The skill is not for you. Just print the message and stop.
 
 ## Process
 
