@@ -14,6 +14,9 @@ shell-snapshots/
 statsig/
 todos/
 usage-data/
+tasks/
+teams/
+image-cache/
 
 # History (may contain sensitive data)
 history.jsonl
