@@ -16,7 +16,7 @@
       "/Users/npratt/git"
     ]
   },
-  "model": "opus[1m]",
+  "model": "opus",
   "enabledPlugins": {
     "gopls-lsp@claude-plugins-official": true
   },
