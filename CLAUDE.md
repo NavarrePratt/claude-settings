@@ -61,14 +61,34 @@ Before committing:
 
 # GitHub Interactions
 
-**NEVER post comments, replies, or any content to GitHub (PRs, issues, discussions) without explicit user approval.**
+**NEVER perform write operations to GitHub without explicit user approval.**
 
-Before submitting anything to the GitHub API:
-1. Show the user exactly what will be posted
-2. Wait for explicit approval (e.g., "yes", "go ahead", "post it")
+This includes:
+- Creating issues (`gh issue create`)
+- Creating PRs (`gh pr create`)
+- Posting comments or replies
+- Deleting issues, PRs, branches
+- Any other GitHub API write operations
+
+Before any GitHub write operation:
+1. Show the user exactly what will be created/posted
+2. Wait for explicit approval (e.g., "yes", "go ahead", "create it")
 3. Only then execute the API call
 
-This applies to: PR comments, PR review replies, issue comments, and any other GitHub write operations.
+# Git Remote Operations
+
+**NEVER push to remote repositories without explicit user approval.**
+
+This includes pushing commits, tags, or any branch updates to remote.
+
+Before running `git push`:
+1. Show what will be pushed (commits, branch)
+2. Wait for explicit approval
+3. Only then execute the push
+
+**ESPECIALLY CRITICAL**: Never run `git push --force` or `git push --force-with-lease` without approval, as these can destroy work on shared branches.
+
+Local operations (commit, branch, stash, rebase) are fine without approval.
 
 ## Comment Formatting
 
