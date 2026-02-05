@@ -13,6 +13,7 @@ session-env/
 shell-snapshots/
 statsig/
 todos/
+usage-data/
 
 # History (may contain sensitive data)
 history.jsonl
