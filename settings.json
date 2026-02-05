@@ -22,6 +22,10 @@
   },
   "alwaysThinkingEnabled": true,
   "mcpServers": {
+    "coreweave": {
+      "type": "http",
+      "url": "https://docs.coreweave.com/mcp"
+    },
     "codex": {
       "type": "stdio",
       "command": "codex",
