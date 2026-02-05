@@ -20,5 +20,25 @@
   "enabledPlugins": {
     "gopls-lsp@claude-plugins-official": true
   },
-  "alwaysThinkingEnabled": true
+  "alwaysThinkingEnabled": true,
+  "mcpServers": {
+    "codex": {
+      "type": "stdio",
+      "command": "codex",
+      "args": [
+        "mcp-server",
+        "-c",
+        "model=\"gpt-5.3-codex\"",
+        "-c",
+        "model_reasoning_effort=\"xhigh\"",
+        "-c",
+        "sandbox_mode=\"read-only\"",
+        "-c",
+        "sandbox_permissions=[\"disk-full-read-access\"]",
+        "-c",
+        "model_instructions_file=\"/Users/npratt/.codex/codex_mcp_instructions.md\""
+      ],
+      "env": {}
+    }
+  }
 }
