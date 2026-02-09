@@ -136,7 +136,14 @@ Based on lines_changed:
 
 ### Reviewer Prompt Template
 
-Each reviewer receives this prompt (substitute FOCUS_AREA, FOCUS_DESCRIPTION, FOCUS_BRIEF, BRANCH_NAME, BASE_COMMIT, FILE_LIST, and CWD):
+Each reviewer receives this prompt (substitute FOCUS_AREA, FOCUS_DESCRIPTION, FOCUS_BRIEF, BRANCH_NAME, BASE_COMMIT, FILE_LIST, TEAM_ROSTER, and CWD):
+
+TEAM_ROSTER is a list of all other reviewers on the team with their name and focus area. Example:
+```
+- reviewer-security: Vulnerabilities, injection, auth gaps, input validation, data exposure
+- reviewer-correctness: Logic errors, off-by-one, nil dereferences, race conditions
+```
+Omit the current reviewer from their own roster.
 
 ```
 You are a senior code reviewer specializing in FOCUS_AREA, part of a parallel review team.
@@ -148,6 +155,10 @@ Changed files:
 FILE_LIST
 
 Your exclusive focus: FOCUS_DESCRIPTION
+
+## Your Teammates
+
+TEAM_ROSTER
 
 ## Review Brief
 
@@ -169,7 +180,12 @@ Check TaskList for your assigned task. Claim it with TaskUpdate (set owner to yo
    - For large files, read the entire file to understand how the change fits
 3. Think deeply. Look for subtle issues, not just obvious ones. Consider interactions between changed files.
 4. Collect ALL findings - err on the side of reporting too much rather than too little.
-5. Send a milestone message to the team lead so they know you are entering the long-running Codex validation phase:
+5. **Cross-domain tips (best effort):** If you notice an issue that clearly belongs in a teammate's focus area, send them a brief fire-and-forget tip. Do not wait for a response. Also include the finding in your own report tagged with `[cross-domain: THEIR_FOCUS_AREA]` so it is not lost if the tip arrives too late. Example:
+
+   SendMessage(type: "message", recipient: "reviewer-security", summary: "Tip: possible auth bypass", content: "TIP: In path/to/file.go:42, I noticed [brief description]. This looks like it falls in your area.")
+
+6. **Incoming tips:** You may receive tips from other reviewers. If a tip is relevant, investigate it and include findings in your report. If you already covered it, ignore it. Do not reply to tips.
+7. Send a milestone message to the team lead so they know you are entering the long-running Codex validation phase:
 
    SendMessage(type: "message", recipient: "team-lead", summary: "FOCUS_AREA primary review done", content: "MILESTONE: Primary review complete. Found N findings across M files. Starting Codex validation.")
 
@@ -225,6 +241,10 @@ Report new findings using the same format, prefixed with "NEW -".
 ```
 
 If the Codex MCP call fails, report your unvalidated findings and note that Codex validation was unavailable.
+
+### Step 3.5: Check for Peer Tips
+
+Before reporting, check if you received any tips from teammates while you were in Codex validation. If a tip points to something you have not already covered, investigate it using the same process as Step 2 (read the diff, read surrounding context, trace dependencies) and validate with Codex as in Step 3. Add validated findings to your report. Skip anything you already addressed.
 
 ### Step 4: Report
 
