@@ -71,7 +71,7 @@ Based on lines_changed:
 | Name | Focus |
 |------|-------|
 | `reviewer-security` | Security, correctness, logic errors, edge cases, input validation |
-| `reviewer-design` | Architecture, code quality, naming, testing gaps, performance |
+| `reviewer-pragmatism` | Architecture, code quality, unnecessary complexity, premature abstraction, YAGNI, over-engineering, locality of behavior |
 
 **Medium (200-1000 lines)** - 4 reviewers:
 
@@ -80,7 +80,7 @@ Based on lines_changed:
 | `reviewer-security` | Vulnerabilities, injection, auth gaps, input validation, data exposure |
 | `reviewer-correctness` | Logic errors, off-by-one, nil dereferences, concurrency, edge cases |
 | `reviewer-architecture` | Design patterns, abstraction, coupling, API design, modularity |
-| `reviewer-performance` | Allocations, N+1 queries, resource leaks, algorithmic complexity |
+| `reviewer-simplicity` | Over-engineering, premature abstraction, YAGNI, unnecessary complexity, locality of behavior, Chesterton's Fence |
 
 **Large (1000+ lines)** - 6 reviewers:
 
@@ -88,10 +88,10 @@ Based on lines_changed:
 |------|-------|
 | `reviewer-security` | Vulnerabilities, injection, auth gaps, input validation, data exposure |
 | `reviewer-correctness` | Logic errors, off-by-one, nil dereferences, race conditions |
-| `reviewer-performance` | Allocations, N+1 queries, resource leaks, algorithmic complexity |
 | `reviewer-architecture` | Design patterns, coupling, API design, modularity |
+| `reviewer-simplicity` | Over-engineering, premature abstraction, YAGNI, unnecessary complexity, locality of behavior, Chesterton's Fence |
+| `reviewer-performance` | Allocations, N+1 queries, resource leaks, algorithmic complexity |
 | `reviewer-testing` | Coverage gaps, testability, missing test cases, test quality |
-| `reviewer-quality` | Naming, duplication, style consistency, readability |
 
 ### Phase 3: Spawn Team and Reviewer Agents
 
@@ -105,7 +105,21 @@ Based on lines_changed:
    - Description: The reviewer's focus area, base commit hash, and list of changed files
    - activeForm: "Reviewing FOCUS_AREA"
 
-3. **Spawn ALL reviewers in parallel** (send all Task calls in a single message):
+3. **Load reviewer briefs.** Before spawning, read the brief file for each reviewer from `~/.claude/skills/team-branch-review/reviewers/`. The mapping is:
+
+   | Reviewer name | Brief file |
+   |---|---|
+   | `reviewer-security` | `reviewers/security.md` |
+   | `reviewer-correctness` | `reviewers/correctness.md` |
+   | `reviewer-architecture` | `reviewers/architecture.md` |
+   | `reviewer-simplicity` | `reviewers/simplicity.md` |
+   | `reviewer-pragmatism` | `reviewers/pragmatism.md` |
+   | `reviewer-performance` | `reviewers/performance.md` |
+   | `reviewer-testing` | `reviewers/testing.md` |
+
+   Read ALL relevant brief files (use the Read tool). Substitute each file's full content as the FOCUS_BRIEF in that reviewer's prompt.
+
+4. **Spawn ALL reviewers in parallel** (send all Task calls in a single message):
 
    ```
    Task(
@@ -122,7 +136,7 @@ Based on lines_changed:
 
 ### Reviewer Prompt Template
 
-Each reviewer receives this prompt (substitute FOCUS_AREA, FOCUS_DESCRIPTION, BRANCH_NAME, BASE_COMMIT, FILE_LIST, and CWD):
+Each reviewer receives this prompt (substitute FOCUS_AREA, FOCUS_DESCRIPTION, FOCUS_BRIEF, BRANCH_NAME, BASE_COMMIT, FILE_LIST, and CWD):
 
 ```
 You are a senior code reviewer specializing in FOCUS_AREA, part of a parallel review team.
@@ -134,6 +148,10 @@ Changed files:
 FILE_LIST
 
 Your exclusive focus: FOCUS_DESCRIPTION
+
+## Review Brief
+
+FOCUS_BRIEF
 
 ## Process
 
