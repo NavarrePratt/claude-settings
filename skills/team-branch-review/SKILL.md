@@ -169,10 +169,15 @@ Check TaskList for your assigned task. Claim it with TaskUpdate (set owner to yo
    - For large files, read the entire file to understand how the change fits
 3. Think deeply. Look for subtle issues, not just obvious ones. Consider interactions between changed files.
 4. Collect ALL findings - err on the side of reporting too much rather than too little.
+5. Send a milestone message to the team lead so they know you are entering the long-running Codex validation phase:
+
+   SendMessage(type: "message", recipient: "team-lead", summary: "FOCUS_AREA primary review done", content: "MILESTONE: Primary review complete. Found N findings across M files. Starting Codex validation.")
+
+   Replace N and M with your actual counts. This message is mandatory before proceeding to Step 3.
 
 ### Step 3: Codex Validation
 
-After completing your primary review, validate your own findings using the Codex MCP tool.
+After sending the milestone message, validate your own findings using the Codex MCP tool.
 
 Call `mcp__codex__codex` with:
 - `sandbox`: `"read-only"`
@@ -275,7 +280,12 @@ You MUST NOT do any of the following while any task is not `completed`:
 
 **Having received messages from all reviewers is NOT a reason to proceed.** Reviewers call SendMessage BEFORE calling TaskUpdate to mark their task `completed`. A message arriving does not mean the reviewer is done. The task status `completed` is the only exit condition for this loop.
 
-**Timeout handling:** If a specific task has been `in_progress` for 20+ consecutive polls with no change, send ONE follow-up message to that reviewer, then continue polling. After 3 follow-up messages to the same reviewer with no status change, declare that reviewer failed and proceed without their findings (note the gap in the report).
+**Understanding milestone messages:** Reviewers send a "MILESTONE: Primary review complete... Starting Codex validation." message before entering the long-running Codex MCP call. Use these to track reviewer progress:
+- Reviewer has NOT sent a milestone message: still doing primary review (fast phase)
+- Reviewer HAS sent a milestone message but no findings yet: inside Codex validation (slow phase, be patient)
+- Reviewer HAS sent findings: review is substantively done, waiting for TaskUpdate
+
+**Timeout handling:** If a specific task has been `in_progress` for 20+ consecutive polls with no change AND the reviewer has not yet sent a milestone message, send ONE follow-up message to that reviewer, then continue polling. If the reviewer HAS sent a milestone message (meaning they are in the Codex validation phase), be more patient - allow 40+ polls before sending a follow-up. After 3 follow-up messages to the same reviewer with no status change, declare that reviewer failed and proceed without their findings (note the gap in the report).
 
 Once ALL tasks show status `completed`, compile all findings into a single list tagged by reviewer.
 
