@@ -105,7 +105,13 @@ Based on lines_changed:
    - Description: The reviewer's focus area, base commit hash, and list of changed files
    - activeForm: "Reviewing FOCUS_AREA"
 
-3. **Load reviewer briefs.** Before spawning, read the brief file for each reviewer from `~/.claude/skills/team-branch-review/reviewers/`. The mapping is:
+3. **Load templates and reviewer briefs.** Before spawning, read the following files using the Read tool:
+
+   **Prompt templates** (from `~/.claude/skills/team-branch-review/templates/`):
+   - `templates/reviewer-prompt.md` - The prompt template for reviewer agents (used in step 4 below)
+   - `templates/final-report.md` - The report format for Phase 5 synthesis (read now, use later)
+
+   **Reviewer briefs** (from `~/.claude/skills/team-branch-review/reviewers/`):
 
    | Reviewer name | Brief file |
    |---|---|
@@ -117,9 +123,11 @@ Based on lines_changed:
    | `reviewer-performance` | `reviewers/performance.md` |
    | `reviewer-testing` | `reviewers/testing.md` |
 
-   Read ALL relevant brief files (use the Read tool). Substitute each file's full content as the FOCUS_BRIEF in that reviewer's prompt.
+   Read ALL relevant brief files and both template files.
 
 4. **Spawn ALL reviewers in parallel** (send all Task calls in a single message):
+
+   For each reviewer, take the loaded reviewer prompt template and substitute all placeholders, then pass the result as the Task prompt:
 
    ```
    Task(
@@ -128,7 +136,7 @@ Based on lines_changed:
      name: "reviewer-security",
      model: "opus",
      description: "Security review",
-     prompt: "[Reviewer Prompt Template with FOCUS substituted]"
+     prompt: "[reviewer-prompt.md with all placeholders substituted]"
    )
    ```
 
@@ -136,146 +144,20 @@ Based on lines_changed:
 
 ### Reviewer Prompt Template
 
-Each reviewer receives this prompt (substitute FOCUS_AREA, FOCUS_DESCRIPTION, FOCUS_BRIEF, BRANCH_NAME, BASE_COMMIT, FILE_LIST, TEAM_ROSTER, and CWD):
+Each reviewer receives the prompt from `~/.claude/skills/team-branch-review/templates/reviewer-prompt.md` (loaded in Phase 3, step 3).
 
-TEAM_ROSTER is a list of all other reviewers on the team with their name and focus area. Example:
-```
-- reviewer-security: Vulnerabilities, injection, auth gaps, input validation, data exposure
-- reviewer-correctness: Logic errors, off-by-one, nil dereferences, race conditions
-```
-Omit the current reviewer from their own roster.
+Substitute these placeholders before passing to each reviewer:
 
-```
-You are a senior code reviewer specializing in FOCUS_AREA, part of a parallel review team.
-
-## Assignment
-
-Branch: BRANCH_NAME (base: BASE_COMMIT)
-Changed files:
-FILE_LIST
-
-Your exclusive focus: FOCUS_DESCRIPTION
-
-## Your Teammates
-
-TEAM_ROSTER
-
-## Review Brief
-
-FOCUS_BRIEF
-
-## Process
-
-### Step 1: Claim Your Task
-Check TaskList for your assigned task. Claim it with TaskUpdate (set owner to your name, status to in_progress).
-
-### Step 2: Primary Review
-1. Understand the branch:
-   - Run `git log --oneline BASE_COMMIT..HEAD` to see commits
-   - Run `git diff --stat BASE_COMMIT..HEAD` for scope
-2. For each changed file relevant to your focus:
-   - Read the diff: `git diff BASE_COMMIT..HEAD -- <filepath>`
-   - Read surrounding context with the Read tool for the full picture
-   - Trace dependencies and callers with Grep and Glob
-   - For large files, read the entire file to understand how the change fits
-3. Think deeply. Look for subtle issues, not just obvious ones. Consider interactions between changed files.
-4. Collect ALL findings - err on the side of reporting too much rather than too little.
-5. **Cross-domain tips (best effort):** If you notice an issue that clearly belongs in a teammate's focus area, send them a brief fire-and-forget tip. Do not wait for a response. Also include the finding in your own report tagged with `[cross-domain: THEIR_FOCUS_AREA]` so it is not lost if the tip arrives too late. Example:
-
-   SendMessage(type: "message", recipient: "reviewer-security", summary: "Tip: possible auth bypass", content: "TIP: In path/to/file.go:42, I noticed [brief description]. This looks like it falls in your area.")
-
-6. **Incoming tips:** You may receive tips from other reviewers. If a tip is relevant, investigate it and include findings in your report. If you already covered it, ignore it. Do not reply to tips.
-7. Send a milestone message to the team lead so they know you are entering the long-running Codex validation phase:
-
-   SendMessage(type: "message", recipient: "team-lead", summary: "FOCUS_AREA primary review done", content: "MILESTONE: Primary review complete. Found N findings across M files. Starting Codex validation.")
-
-   Replace N and M with your actual counts. This message is mandatory before proceeding to Step 3.
-
-### Step 3: Codex Validation
-
-After sending the milestone message, validate your own findings using the Codex MCP tool.
-
-Call `mcp__codex__codex` with:
-- `sandbox`: `"read-only"`
-- `approval-policy`: `"never"`
-- `cwd`: "CWD"
-
-Use this prompt (substitute YOUR_FINDINGS with your actual findings from Step 2):
-
-```
-You are a senior code reviewer validating findings from a FOCUS_AREA specialist. Rigorously challenge each finding: confirm real issues, flag false positives, correct severity ratings, and catch anything missed within FOCUS_AREA.
-
-Branch: BRANCH_NAME (base: BASE_COMMIT)
-
-## Findings to Validate
-
-YOUR_FINDINGS
-
-## Your Task
-
-### Part 1: Validate Each Finding
-
-For EACH finding, examine the actual code yourself:
-1. Run `git diff BASE_COMMIT..HEAD -- <file>` to see the change
-2. Read surrounding context to understand the full picture
-3. Determine your verdict:
-
-### Finding: [original title]
-- **Verdict**: Confirmed | Disputed | Severity Adjusted | Enhanced
-- **Confidence**: High | Medium | Low
-- **Rationale**: Specific reasoning with code evidence for your verdict
-- **Adjusted Severity**: [only if different from original]
-- **Additional Context**: [related issues, broader implications, or missing nuance]
-
-### Part 2: Find Missed Issues
-
-After validating, check the same files for FOCUS_AREA issues the primary review missed.
-Report new findings using the same format, prefixed with "NEW -".
-
-### Part 3: Validation Summary
-
-- Findings confirmed: N / total
-- Findings disputed: N / total
-- Severity adjustments: N
-- New findings added: N
-```
-
-If the Codex MCP call fails, report your unvalidated findings and note that Codex validation was unavailable.
-
-### Step 3.5: Check for Peer Tips
-
-Before reporting, check if you received any tips from teammates while you were in Codex validation. If a tip points to something you have not already covered, investigate it using the same process as Step 2 (read the diff, read surrounding context, trace dependencies) and validate with Codex as in Step 3. Add validated findings to your report. Skip anything you already addressed.
-
-### Step 4: Report
-
-Send the team lead (via SendMessage, type: "message") your complete results in this format:
-
-## Raw Findings
-
-For each finding:
-
-### [Short descriptive title]
-- **File**: path/to/file:line_number
-- **Severity**: Critical | High | Medium | Low
-- **Category**: [specific concern within FOCUS_AREA]
-- **Issue**: Clear description of the problem
-- **Evidence**: The specific code snippet or diff excerpt showing the issue
-- **Suggestion**: Concrete fix or improvement
-- **Confidence**: High | Medium | Low
-
-## Codex Validation Results
-
-[Full Codex validation output from Step 3]
-
-## Summary
-- Raw findings: Critical: N, High: N, Medium: N, Low: N
-- After Codex validation: N confirmed, N disputed, N adjusted, N new
-
-## Notable Observations
-[Broader observations about patterns, quality, or concerns in your focus area]
-
-Then mark your task completed via TaskUpdate (status: completed).
-```
+| Placeholder | Value |
+|---|---|
+| FOCUS_AREA | The reviewer's specialization name |
+| FOCUS_DESCRIPTION | One-line description of their focus |
+| FOCUS_BRIEF | Full content from the reviewer's brief file |
+| BRANCH_NAME | Current branch name |
+| BASE_COMMIT | Exact commit hash from Phase 1 |
+| FILE_LIST | All changed file paths, one per line |
+| CWD | Working directory |
+| TEAM_ROSTER | List of all OTHER reviewers (omit current). Format each as: `- reviewer-name: Focus description` |
 
 ### Phase 4: Wait for All Tasks to Complete
 
@@ -313,73 +195,7 @@ Once ALL tasks show status `completed`, compile all findings into a single list 
 
 You (the lead) produce the final report directly. Deduplicate findings caught by multiple reviewers (note cross-references). Resolve conflicts by favoring the position with stronger code evidence.
 
-Use this report format:
-
-```markdown
-# Branch Review: BRANCH_NAME
-
-## Overview
-- **Branch**: BRANCH_NAME -> main
-- **Commits**: N commits
-- **Files Changed**: N files (+X/-Y lines)
-- **Review Team**: N Claude reviewers (Opus) + Codex validation
-- **Reviewers**: [list of roles that participated]
-
-## Outcome: [APPROVED | NEEDS REVISION | MANUAL REVIEW REQUIRED]
-
-Determination:
-- APPROVED: No confirmed Critical or High findings after Codex validation
-- NEEDS REVISION: Any confirmed Critical or High findings remain
-- MANUAL REVIEW REQUIRED: Significant disagreement (>50% of Critical/High disputed) between Claude and Codex
-
----
-
-## Critical & High Findings
-
-### [Finding Title]
-- **File**: path:line
-- **Severity**: Critical/High
-- **Category**: [concern area]
-- **Issue**: Description
-- **Suggestion**: Concrete fix
-- **Validation**: [Confirmed/Disputed] by Codex ([confidence]) - [rationale]
-- **Found by**: [which reviewer(s)]
-
-[Repeat for each]
-
----
-
-## Medium & Low Findings
-
-[Same format, grouped by category for readability]
-
----
-
-## Codex-Only Findings
-
-[Issues discovered by Codex that no Claude reviewer caught]
-
----
-
-## Disputed Findings
-
-[Findings where Claude and Codex disagreed, with both perspectives and evidence]
-
----
-
-## Review Statistics
-- Total findings (pre-validation): N
-- Post-validation: N confirmed, N disputed, N severity-adjusted, N new from Codex
-- By severity: Critical: N, High: N, Medium: N, Low: N
-- Cross-reviewer overlap: N findings caught by 2+ reviewers
-- Claude-Codex agreement rate: X%
-
-## Reviewer Notes
-[Notable observations from individual reviewers about overall code quality, patterns, or architectural concerns]
-
-## Commit Recommendations
-[Suggestions for commit organization if applicable]
-```
+Use the report format from `~/.claude/skills/team-branch-review/templates/final-report.md` (loaded in Phase 3, step 3). Substitute BRANCH_NAME and fill in all sections with the compiled findings.
 
 ### Phase 6: Cleanup
 
