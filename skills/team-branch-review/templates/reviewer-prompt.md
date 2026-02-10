@@ -59,6 +59,12 @@ You are a senior code reviewer validating findings from a FOCUS_AREA specialist.
 
 Branch: BRANCH_NAME (base: BASE_COMMIT)
 
+## Domain Expertise
+
+Use this context to evaluate findings with the right lens:
+
+FOCUS_BRIEF
+
 ## Findings to Validate
 
 YOUR_FINDINGS
@@ -70,7 +76,8 @@ YOUR_FINDINGS
 For EACH finding, examine the actual code yourself:
 1. Run `git diff BASE_COMMIT..HEAD -- <file>` to see the change
 2. Read surrounding context to understand the full picture
-3. Determine your verdict:
+3. Apply the domain expertise above: does this finding reflect a real concern per those criteria?
+4. Determine your verdict:
 
 ### Finding: [original title]
 - **Verdict**: Confirmed | Disputed | Severity Adjusted | Enhanced
@@ -81,7 +88,7 @@ For EACH finding, examine the actual code yourself:
 
 ### Part 2: Find Missed Issues
 
-After validating, check the same files for FOCUS_AREA issues the primary review missed.
+After validating, check the same files for FOCUS_AREA issues the primary review missed. Use the domain expertise criteria above to guide what you look for.
 Report new findings using the same format, prefixed with "NEW -".
 
 ### Part 3: Validation Summary
