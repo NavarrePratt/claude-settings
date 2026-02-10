@@ -53,6 +53,10 @@ git log --oneline $(git merge-base HEAD origin/main 2>/dev/null || git merge-bas
 
 Do NOT proceed past this phase unless both conditions are met.
 
+**Step 3: Compute team name**
+
+Compute a unique team name: take the branch name, replace `/` with `-`, truncate to 30 chars, then prefix with `fix-` and append `-` plus the first 6 chars of HEAD's commit hash. Example: branch `feat/add-auth` at commit `a1b2c3d` becomes `fix-feat-add-auth-a1b2c3`. Record this as **TEAM_NAME** and use it everywhere a team_name is needed.
+
 ### Phase 1: Gather Review Report
 
 Obtain the review report from one of these sources (check in order):
@@ -224,7 +228,7 @@ Store discovered commands for Phase 6.
 
 1. **Create the team**:
    ```
-   Teammate(operation: "spawnTeam", team_name: "branch-fix", description: "Fix implementation for BRANCH_NAME")
+   Teammate(operation: "spawnTeam", team_name: "TEAM_NAME", description: "Fix implementation for BRANCH_NAME")
    ```
 
 2. **Create tasks** for each agent using TaskCreate:
@@ -237,7 +241,7 @@ Store discovered commands for Phase 6.
    ```
    Task(
      subagent_type: "general-purpose",
-     team_name: "branch-fix",
+     team_name: "TEAM_NAME",
      name: "fixer-1",
      model: "opus",
      description: "Fix findings in [files]",

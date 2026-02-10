@@ -61,6 +61,7 @@ Record:
 - **files_changed**: List of all changed file paths
 - **commit_count**: Number of commits
 - **base_commit**: The exact commit hash (use this everywhere, not "main")
+- **team_name**: Compute a unique team name: take the branch name, replace `/` with `-`, truncate to 30 chars, then prefix with `review-` and append `-` plus the first 6 chars of HEAD's commit hash. Example: branch `feat/add-auth` at commit `a1b2c3d` becomes `review-feat-add-auth-a1b2c3`. Use this value everywhere a team_name is needed.
 
 ### Phase 2: Determine Team Composition
 
@@ -97,7 +98,7 @@ Based on lines_changed:
 
 1. **Create the team**:
    ```
-   Teammate(operation: "spawnTeam", team_name: "branch-review", description: "Branch review of BRANCH_NAME")
+   Teammate(operation: "spawnTeam", team_name: "TEAM_NAME", description: "Branch review of BRANCH_NAME")
    ```
 
 2. **Create tasks** for each reviewer using TaskCreate. Each task should include:
@@ -132,7 +133,7 @@ Based on lines_changed:
    ```
    Task(
      subagent_type: "general-purpose",
-     team_name: "branch-review",
+     team_name: "TEAM_NAME",
      name: "reviewer-security",
      model: "opus",
      description: "Security review",
