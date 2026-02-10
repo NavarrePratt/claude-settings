@@ -8,6 +8,10 @@ FILE_LIST
 
 Your exclusive focus: FOCUS_DESCRIPTION
 
+## PR Description
+
+PR_CONTEXT
+
 ## Your Teammates
 
 TEAM_ROSTER

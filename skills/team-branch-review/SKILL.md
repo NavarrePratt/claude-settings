@@ -56,11 +56,20 @@ git log --oneline BASE_COMMIT..HEAD
 git diff --stat BASE_COMMIT..HEAD
 ```
 
+**Look up PR description** (if one exists for this branch):
+
+```bash
+gh pr view --json title,body --jq '"## " + .title + "\n\n" + .body' 2>/dev/null
+```
+
+If a PR exists, save the output as **pr_context**. If the command fails (no PR exists), set **pr_context** to empty string.
+
 Record:
 - **lines_changed**: Total lines added + removed
 - **files_changed**: List of all changed file paths
 - **commit_count**: Number of commits
 - **base_commit**: The exact commit hash (use this everywhere, not "main")
+- **pr_context**: The PR title and body if a PR exists, otherwise empty
 - **team_name**: Compute a unique team name: take the branch name, replace `/` with `-`, truncate to 30 chars, then prefix with `review-` and append `-` plus the first 6 chars of HEAD's commit hash. Example: branch `feat/add-auth` at commit `a1b2c3d` becomes `review-feat-add-auth-a1b2c3`. Use this value everywhere a team_name is needed.
 
 ### Phase 2: Determine Team Composition
@@ -165,6 +174,7 @@ Substitute these placeholders before passing to each reviewer:
 | CWD | Working directory |
 | TEAM_NAME | The team name computed in Phase 1 (used for findings file path) |
 | REVIEWER_NAME | The reviewer's name, e.g. `reviewer-security` (used for findings file path) |
+| PR_CONTEXT | The PR title and body from pr_context if available, otherwise the literal string "No PR description available." |
 | TEAM_ROSTER | List of all OTHER reviewers (omit current). Format each as: `- reviewer-name: Focus description` |
 
 ### Phase 4: Wait for All Tasks to Complete
@@ -265,10 +275,12 @@ rm -rf /tmp/review-TEAM_NAME
 - **Never mark reviewer tasks**: You MUST NOT call TaskUpdate on any reviewer task. Only reviewers mark their own tasks completed.
 - **Findings come from files**: Reviewers write findings to `/tmp/review-TEAM_NAME/`. Do not use message content as findings.
 
-## Chaining to Fix Implementation
+## Next Steps
 
 After presenting the report, if the outcome is NEEDS REVISION or MANUAL REVIEW REQUIRED, add this note:
 
-> To implement fixes for these findings, run `/team-branch-fix`. It will let you choose which findings to fix, then spawn agents to implement the changes in parallel.
+> **Next steps:**
+> - `/team-branch-fix` - Implement fixes for these findings. Choose which to fix, then agents implement changes in parallel.
+> - `/team-branch-comment` - Post findings as PR review comments on specific lines. Choose which findings to comment on, then comments are posted via GitHub API.
 
 $ARGUMENTS
