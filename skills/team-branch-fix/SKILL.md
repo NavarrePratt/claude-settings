@@ -57,6 +57,11 @@ Do NOT proceed past this phase unless both conditions are met.
 
 Compute a unique team name: take the branch name, replace `/` with `-`, truncate to 30 chars, then prefix with `fix-` and append `-` plus the first 6 chars of HEAD's commit hash. Example: branch `feat/add-auth` at commit `a1b2c3d` becomes `fix-feat-add-auth-a1b2c3`. Record this as **TEAM_NAME** and use it everywhere a team_name is needed.
 
+Create temp directory for fixer results:
+```bash
+mkdir -p /tmp/fix-TEAM_NAME
+```
+
 ### Phase 1: Gather Review Report
 
 Obtain the review report from one of these sources (check in order):
@@ -327,9 +332,9 @@ Review these code changes for correctness. The changes implement fixes for speci
 
 If Codex finds issues with your fixes, correct them and re-validate.
 
-### Step 5: Report
+### Step 5: Write Results to File
 
-Send the team lead (via SendMessage, type: "message") your results:
+Write your results to `/tmp/fix-TEAM_NAME/FIXER_NAME.md` using the Write tool. Use this exact format:
 
 ## Fixes Applied
 For each fix:
@@ -344,24 +349,45 @@ For each fix:
 ## Skipped Findings
 [Any findings that couldn't be fixed, with explanation]
 
-Then mark your task completed via TaskUpdate (status: completed).
+After writing the results file, mark your task completed via TaskUpdate (status: completed). The team lead will read your results from the file after all fixers have finished.
 ```
 
 ### Phase 6: Wait for All Agents to Complete
 
-**Do NOT proceed to verification until every fix agent has finished.** Use TaskList to monitor progress.
+**CRITICAL: You MUST NOT call TaskUpdate to change the status of any fixer task.** Only the fixer agent that owns a task may call TaskUpdate on it. If you believe a fixer is stuck, send them a message - do not mark their task completed yourself.
 
-Poll TaskList and check that ALL fix tasks have status "completed". For each agent:
-1. Confirm the task is marked "completed" (not "in_progress" or "pending")
-2. Confirm you received the agent's results via SendMessage
+Execute this loop. Do not deviate from it.
 
-**If an agent appears stuck** (task still "in_progress" for an extended period):
-- Send a follow-up message asking for status
-- If the agent has gone idle without completing, note which findings were not fixed
+```
+loop:
+    result = TaskList()
+    if EVERY task in result has status "completed":
+        break -> proceed to reading results files, then Phase 7
+    else:
+        call TaskList() again (continue loop)
+```
 
-Only after ALL fix tasks show "completed" (or have been marked as failed), proceed to Phase 7.
+**If ANY task status is not `completed`, your ONLY permitted next action is to call TaskList again.**
 
-Compile a summary of all agent results:
+You MUST NOT do any of the following while any task is not `completed`:
+- Run verification commands
+- Send shutdown requests to any fixer
+- Proceed to Phase 7 or Phase 8
+- Present results to the user
+- Call TaskUpdate on any fixer task
+
+**Messages from fixers are NOT completion signals.** Fixers write their results to files and then call TaskUpdate to mark their task `completed`. The task status `completed` is the only exit condition for this loop.
+
+**Timeout handling:** If a specific task has been `in_progress` for 20+ consecutive polls with no change, send ONE follow-up message to that fixer, then continue polling. After 3 follow-up messages to the same fixer with no status change, declare that fixer failed and proceed without their results (note the gap in the report).
+
+**Collecting results:** Once ALL tasks show status `completed`, read each fixer's results file:
+
+```
+For each fixer:
+    Read /tmp/fix-TEAM_NAME/{fixer-name}.md
+```
+
+Compile a summary of all results:
 - Which findings were fixed (and how)
 - Which findings were skipped by agents (and why)
 - Which agents failed (and what findings they owned)
@@ -396,6 +422,11 @@ SendMessage(type: "shutdown_request", recipient: "fixer-2", content: "Fixes comp
 After all teammates confirm shutdown:
 ```
 Teammate(operation: "cleanup")
+```
+
+Clean up temp directory:
+```bash
+rm -rf /tmp/fix-TEAM_NAME
 ```
 
 ### Phase 9: Final Report and Commit Strategy
@@ -517,5 +548,7 @@ Report back what commits were created.
 - **Preserve user decisions**: Only fix what the user approved
 - **Self-validate**: Each agent validates with Codex before reporting done
 - **Don't auto-fix verification failures**: Report and let the user decide
+- **Never mark fixer tasks**: You MUST NOT call TaskUpdate on any fixer task. Only fixers mark their own tasks completed.
+- **Results come from files**: Fixers write results to `/tmp/fix-TEAM_NAME/`. Do not use message content as results.
 
 $ARGUMENTS

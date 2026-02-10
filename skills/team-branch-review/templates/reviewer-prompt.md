@@ -37,15 +37,15 @@ Check TaskList for your assigned task. Claim it with TaskUpdate (set owner to yo
    SendMessage(type: "message", recipient: "reviewer-security", summary: "Tip: possible auth bypass", content: "TIP: In path/to/file.go:42, I noticed [brief description]. This looks like it falls in your area.")
 
 6. **Incoming tips:** You may receive tips from other reviewers. If a tip is relevant, investigate it and include findings in your report. If you already covered it, ignore it. Do not reply to tips.
-7. Send a milestone message to the team lead so they know you are entering the long-running Codex validation phase:
+7. Send a checkpoint message to the team lead so they know you are entering the long-running Codex validation phase:
 
-   SendMessage(type: "message", recipient: "team-lead", summary: "FOCUS_AREA primary review done", content: "MILESTONE: Primary review complete. Found N findings across M files. Starting Codex validation.")
+   SendMessage(type: "message", recipient: "team-lead", summary: "FOCUS_AREA entering Codex validation", content: "CHECKPOINT: Entering Codex validation. N findings across M files pending validation.")
 
    Replace N and M with your actual counts. This message is mandatory before proceeding to Step 3.
 
 ### Step 3: Codex Validation
 
-After sending the milestone message, validate your own findings using the Codex MCP tool.
+After sending the checkpoint message, validate your own findings using the Codex MCP tool.
 
 Call `mcp__codex__codex` with:
 - `sandbox`: `"read-only"`
@@ -105,9 +105,9 @@ If the Codex MCP call fails, report your unvalidated findings and note that Code
 
 Before reporting, check if you received any tips from teammates while you were in Codex validation. If a tip points to something you have not already covered, investigate it using the same process as Step 2 (read the diff, read surrounding context, trace dependencies) and validate with Codex as in Step 3. Add validated findings to your report. Skip anything you already addressed.
 
-### Step 4: Report
+### Step 4: Write Findings to File
 
-Send the team lead (via SendMessage, type: "message") your complete results in this format:
+Write your complete results to `/tmp/review-TEAM_NAME/REVIEWER_NAME.md` using the Write tool. Use this exact format:
 
 ## Raw Findings
 
@@ -133,4 +133,4 @@ For each finding:
 ## Notable Observations
 [Broader observations about patterns, quality, or concerns in your focus area]
 
-Then mark your task completed via TaskUpdate (status: completed).
+After writing the findings file, mark your task completed via TaskUpdate (status: completed). The team lead will read your findings from the file after all reviewers have finished.

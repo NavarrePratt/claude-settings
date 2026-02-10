@@ -101,12 +101,17 @@ Based on lines_changed:
    Teammate(operation: "spawnTeam", team_name: "TEAM_NAME", description: "Branch review of BRANCH_NAME")
    ```
 
-2. **Create tasks** for each reviewer using TaskCreate. Each task should include:
+2. **Create temp directory** for reviewer findings:
+   ```bash
+   mkdir -p /tmp/review-TEAM_NAME
+   ```
+
+3. **Create tasks** for each reviewer using TaskCreate. Each task should include:
    - Subject: "Review FOCUS_AREA for BRANCH_NAME"
    - Description: The reviewer's focus area, base commit hash, and list of changed files
    - activeForm: "Reviewing FOCUS_AREA"
 
-3. **Load templates and reviewer briefs.** Before spawning, read the following files using the Read tool:
+4. **Load templates and reviewer briefs.** Before spawning, read the following files using the Read tool:
 
    **Prompt templates** (from `~/.claude/skills/team-branch-review/templates/`):
    - `templates/reviewer-prompt.md` - The prompt template for reviewer agents (used in step 4 below)
@@ -126,7 +131,7 @@ Based on lines_changed:
 
    Read ALL relevant brief files and both template files.
 
-4. **Spawn ALL reviewers in parallel** (send all Task calls in a single message):
+5. **Spawn ALL reviewers in parallel** (send all Task calls in a single message):
 
    For each reviewer, take the loaded reviewer prompt template and substitute all placeholders, then pass the result as the Task prompt:
 
@@ -145,7 +150,7 @@ Based on lines_changed:
 
 ### Reviewer Prompt Template
 
-Each reviewer receives the prompt from `~/.claude/skills/team-branch-review/templates/reviewer-prompt.md` (loaded in Phase 3, step 3).
+Each reviewer receives the prompt from `~/.claude/skills/team-branch-review/templates/reviewer-prompt.md` (loaded in Phase 3, step 4).
 
 Substitute these placeholders before passing to each reviewer:
 
@@ -158,9 +163,13 @@ Substitute these placeholders before passing to each reviewer:
 | BASE_COMMIT | Exact commit hash from Phase 1 |
 | FILE_LIST | All changed file paths, one per line |
 | CWD | Working directory |
+| TEAM_NAME | The team name computed in Phase 1 (used for findings file path) |
+| REVIEWER_NAME | The reviewer's name, e.g. `reviewer-security` (used for findings file path) |
 | TEAM_ROSTER | List of all OTHER reviewers (omit current). Format each as: `- reviewer-name: Focus description` |
 
 ### Phase 4: Wait for All Tasks to Complete
+
+**CRITICAL: You MUST NOT call TaskUpdate to change the status of any reviewer task.** Only the reviewer agent that owns a task may call TaskUpdate on it. If you believe a reviewer is stuck, send them a message - do not mark their task completed yourself.
 
 Execute this loop. Do not deviate from it.
 
@@ -168,7 +177,7 @@ Execute this loop. Do not deviate from it.
 loop:
     result = TaskList()
     if EVERY task in result has status "completed":
-        break -> proceed to Phase 5
+        break -> proceed to reading findings files, then Phase 5
     else:
         call TaskList() again (continue loop)
 ```
@@ -180,23 +189,31 @@ You MUST NOT do any of the following while any task is not `completed`:
 - Send shutdown requests to any reviewer
 - Proceed to Phase 5 or Phase 6
 - Present findings to the user
+- Call TaskUpdate on any reviewer task
 
-**Having received messages from all reviewers is NOT a reason to proceed.** Reviewers call SendMessage BEFORE calling TaskUpdate to mark their task `completed`. A message arriving does not mean the reviewer is done. The task status `completed` is the only exit condition for this loop.
+**Messages from reviewers are NOT completion signals.** Reviewers write their findings to files and then call TaskUpdate to mark their task `completed`. Any messages you receive from reviewers (checkpoint notifications, cross-domain tips) are progress signals only. The task status `completed` is the only exit condition for this loop.
 
-**Understanding milestone messages:** Reviewers send a "MILESTONE: Primary review complete... Starting Codex validation." message before entering the long-running Codex MCP call. Use these to track reviewer progress:
-- Reviewer has NOT sent a milestone message: still doing primary review (fast phase)
-- Reviewer HAS sent a milestone message but no findings yet: inside Codex validation (slow phase, be patient)
-- Reviewer HAS sent findings: review is substantively done, waiting for TaskUpdate
+**Understanding checkpoint messages:** Reviewers send a "CHECKPOINT: Entering Codex validation..." message before entering the long-running Codex MCP call. Use these to track reviewer progress:
+- Reviewer has NOT sent a checkpoint message: still doing primary review (fast phase)
+- Reviewer HAS sent a checkpoint message but task not yet completed: inside Codex validation (slow phase, be patient)
+- Task shows `completed`: reviewer is done, findings file is ready
 
-**Timeout handling:** If a specific task has been `in_progress` for 20+ consecutive polls with no change AND the reviewer has not yet sent a milestone message, send ONE follow-up message to that reviewer, then continue polling. If the reviewer HAS sent a milestone message (meaning they are in the Codex validation phase), be more patient - allow 40+ polls before sending a follow-up. After 3 follow-up messages to the same reviewer with no status change, declare that reviewer failed and proceed without their findings (note the gap in the report).
+**Timeout handling:** If a specific task has been `in_progress` for 20+ consecutive polls with no change AND the reviewer has not yet sent a checkpoint message, send ONE follow-up message to that reviewer, then continue polling. If the reviewer HAS sent a checkpoint message (meaning they are in the Codex validation phase), be more patient - allow 40+ polls before sending a follow-up. After 3 follow-up messages to the same reviewer with no status change, declare that reviewer failed and proceed without their findings (note the gap in the report).
 
-Once ALL tasks show status `completed`, compile all findings into a single list tagged by reviewer.
+**Collecting findings:** Once ALL tasks show status `completed`, read each reviewer's findings file:
+
+```
+For each reviewer:
+    Read /tmp/review-TEAM_NAME/{reviewer-name}.md
+```
+
+Compile all findings into a single list tagged by reviewer.
 
 ### Phase 5: Synthesize Final Report
 
-You (the lead) produce the final report directly. Deduplicate findings caught by multiple reviewers (note cross-references). Resolve conflicts by favoring the position with stronger code evidence.
+You (the lead) produce the final report directly using the findings read from `/tmp/review-TEAM_NAME/` files in Phase 4. Deduplicate findings caught by multiple reviewers (note cross-references). Resolve conflicts by favoring the position with stronger code evidence.
 
-Use the report format from `~/.claude/skills/team-branch-review/templates/final-report.md` (loaded in Phase 3, step 3). Substitute BRANCH_NAME and fill in all sections with the compiled findings.
+Use the report format from `~/.claude/skills/team-branch-review/templates/final-report.md` (loaded in Phase 3, step 4). Substitute BRANCH_NAME and fill in all sections with the compiled findings.
 
 ### Phase 6: Cleanup
 
@@ -219,6 +236,11 @@ Teammate(operation: "cleanup")
 
 If cleanup fails with "active members" error, wait and retry. Do NOT use `rm -rf` as a workaround - it leaves orphaned processes. If cleanup still fails after 3 retries, report the issue to the user rather than forcing deletion.
 
+**Step 4: Clean up temp directory:**
+```bash
+rm -rf /tmp/review-TEAM_NAME
+```
+
 ---
 
 ## Error Handling
@@ -240,6 +262,8 @@ If cleanup fails with "active members" error, wait and retry. Do NOT use `rm -rf
 - **Deep exploration**: Reviewers should use Read, Grep, Glob extensively - not just skim diffs
 - **No severity inflation**: Findings should use honest, appropriate severity levels
 - **Phase 4 is a hard gate**: Do NOT write the report until every task status is `completed`. Receiving messages from reviewers does not satisfy this requirement. This is non-negotiable.
+- **Never mark reviewer tasks**: You MUST NOT call TaskUpdate on any reviewer task. Only reviewers mark their own tasks completed.
+- **Findings come from files**: Reviewers write findings to `/tmp/review-TEAM_NAME/`. Do not use message content as findings.
 
 ## Chaining to Fix Implementation
 
