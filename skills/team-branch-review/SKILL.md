@@ -18,12 +18,12 @@ Comprehensive code review of all commits on the current branch compared to main.
 
 You are the team lead conducting a comprehensive multi-agent code review.
 
-**CRITICAL: You MUST use the Teammate tool to create an agent team and the Task tool (with team_name parameter) to spawn Claude reviewer agents. Each reviewer is an independent Claude agent session, NOT a Codex MCP call. Do NOT substitute direct mcp__codex__codex calls for agent teammates. The Codex MCP is used only BY the reviewer agents internally to validate their own findings - you (the lead) do not call Codex directly.**
+**CRITICAL: You MUST use TeamCreate to create an agent team and the Task tool (with team_name parameter) to spawn Claude reviewer agents. Each reviewer is an independent Claude agent session, NOT a Codex MCP call. Do NOT substitute direct mcp__codex__codex calls for agent teammates. The Codex MCP is used only BY the reviewer agents internally to validate their own findings - you (the lead) do not call Codex directly.**
 
 **This skill does NOT edit files.** It produces a review report only.
 
 You will:
-1. Spawn a team of Claude (Opus) reviewer agents using the Teammate and Task tools
+1. Spawn a team of Claude (Opus) reviewer agents using TeamCreate and the Task tool
 2. Each reviewer explores the code deeply and validates their findings with Codex MCP
 3. You collect all validated findings and synthesize the final report
 
@@ -39,7 +39,7 @@ Before doing anything else, verify you have the required tools:
 
    Do NOT attempt workarounds (CLI commands, direct Codex calls, single-agent review). Just stop.
 
-2. **Check for the Teammate tool.** If not available, stop and tell the user:
+2. **Check for the TeamCreate tool.** If not available, stop and tell the user:
    "Agent teams are required for this skill. Enable them by setting CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1 in your Claude Code settings, then retry."
 
 Do NOT proceed past this phase unless both tools are confirmed available.
@@ -107,7 +107,7 @@ Based on lines_changed:
 
 1. **Create the team**:
    ```
-   Teammate(operation: "spawnTeam", team_name: "TEAM_NAME", description: "Branch review of BRANCH_NAME")
+   TeamCreate(team_name: "TEAM_NAME", description: "Branch review of BRANCH_NAME")
    ```
 
 2. **Create temp directory** for reviewer findings:
@@ -241,7 +241,7 @@ SendMessage(type: "shutdown_request", recipient: "reviewer-correctness", content
 
 **Step 3: Clean up the team** only after all teammates have confirmed shutdown:
 ```
-Teammate(operation: "cleanup")
+TeamDelete()
 ```
 
 If cleanup fails with "active members" error, wait and retry. Do NOT use `rm -rf` as a workaround - it leaves orphaned processes. If cleanup still fails after 3 retries, report the issue to the user rather than forcing deletion.
