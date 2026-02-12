@@ -12,6 +12,16 @@ See detailed rules in:
 
 Use `/commit` slash command for all commits—creates atomic, well-formatted commits matching project style.
 
+# PR Description Standards
+
+Every PR must have a meaningful description. Never create PRs with empty bodies.
+
+When writing PR descriptions and commit messages:
+- Explain why the change was made, not what changed. We can read the code.
+- Link relevant Slack threads, JIRA tickets, and design documents
+- Write for the future: the on-call engineer debugging at 3am will not know about your Slack discussion. PRs and commits serve future readers, not just current reviewers.
+- Include enough context that someone unfamiliar with the work can understand the motivation from the PR alone
+
 # Bead Creation Boundary
 
 After creating a bead (via /issue-create skill OR manual `br create`):
