@@ -352,34 +352,11 @@ Record the choice as **REVIEW_EVENT**: "COMMENT" or "REQUEST_CHANGES".
 
 ### Phase 6: Post Review
 
-Submit all comments as a single PR review using the GitHub Reviews API. This groups all findings under one review instead of posting individual comments.
+Submit all comments as a single PR review using the GitHub Reviews API. This groups all findings under one review instead of posting individual comments. Uses three-tier fallback for robustness.
 
-**Step 1: Build the review payload**
+**Step 1: Build the review body**
 
-Construct a JSON file at `/tmp/pr-review-payload.json` with this structure:
-
-```json
-{
-  "commit_id": "HEAD_SHA",
-  "event": "REVIEW_EVENT",
-  "body": "REVIEW_BODY",
-  "comments": [
-    {
-      "path": "FILE_PATH",
-      "line": LINE_NUMBER,
-      "body": "COMMENT_BODY"
-    }
-  ]
-}
-```
-
-Where:
-- **commit_id**: The HEAD_SHA recorded in Phase 0
-- **event**: The REVIEW_EVENT chosen by the user ("COMMENT" or "REQUEST_CHANGES")
-- **body**: A review summary (see below)
-- **comments**: Array of all inline comments with file:line locations
-
-**Review body format:**
+Build the review body text (REVIEW_BODY):
 
 ```
 [via Claude] Code review: N findings across M files.
@@ -402,54 +379,83 @@ Where:
 </details>
 ```
 
-If all findings have file:line locations and there are no general findings, omit the "General findings" section but always include the collapsible full report:
-```
-[via Claude] Code review: N findings across M files.
+If all findings have file:line locations and there are no general findings, omit the "General findings" section but always include the collapsible full report.
 
-<details>
-<summary>Full review report</summary>
+**Step 2: Build findings JSONL**
 
-[RAW_REPORT]
-
-</details>
-```
-
-**Step 2: Write and post the payload**
-
-Write the JSON payload to a temp file and submit via `gh api`:
+For each inline finding (those with file:line), write one JSON object per line to `/tmp/review-findings.jsonl`. Use `jq` for safe escaping:
 
 ```bash
-gh api repos/OWNER/REPO/pulls/PR_NUMBER/reviews \
-  --input /tmp/pr-review-payload.json
+jq -cn --arg path "FILE_PATH" --argjson line LINE_NUMBER --arg body "COMMENT_BODY" \
+  '{path: $path, line: $line, body: $body}' >> /tmp/review-findings.jsonl
 ```
 
-Use Python or `jq` to construct the JSON safely, avoiding shell escaping issues with comment bodies:
+This avoids the fragility of building one large JSON blob. Each finding is independently valid JSON.
+
+**Step 3: Post with three-tier fallback**
+
+**Tier 1: Review with inline comments**
+
+Read the JSONL, filter valid entries, and post as a PR review with inline comments:
 
 ```bash
-python3 -c "
-import json, sys
-payload = {
-    'commit_id': 'HEAD_SHA',
-    'event': 'REVIEW_EVENT',
-    'body': '''REVIEW_BODY''',
-    'comments': [
-        {'path': 'file.py', 'line': 10, 'body': 'comment text'},
-        # ... all inline comments
-    ]
-}
-json.dump(payload, open('/tmp/pr-review-payload.json', 'w'))
-"
+# Filter valid entries
+COMMENTS=$(jq -s '[.[] | select((.path|type)=="string" and (.line|type)=="number" and .line > 0 and (.body|type)=="string")]' /tmp/review-findings.jsonl)
+
+# Build payload - shell/jq controls commit_id and event (trust boundary)
+jq -n \
+  --arg commit_id "$HEAD_SHA" \
+  --arg event "$REVIEW_EVENT" \
+  --arg body "$REVIEW_BODY" \
+  --argjson comments "$COMMENTS" \
+  '{commit_id: $commit_id, event: $event, body: $body, comments: $comments}' \
+  > /tmp/pr-review-final.json
 
 gh api repos/OWNER/REPO/pulls/PR_NUMBER/reviews \
-  --input /tmp/pr-review-payload.json
+  --input /tmp/pr-review-final.json
 ```
+
+If tier 1 succeeds, clean up temp files and proceed to Phase 7.
+
+**Tier 2: Review without inline comments**
+
+If tier 1 fails (422 from bad paths/lines, or JSONL is missing/invalid), fold all inline findings into the review body and post a body-only review:
+
+```bash
+# Append inline findings to body as text
+INLINE_TEXT=$(jq -s -r '.[] | "**\(.path):\(.line)**\n\(.body)\n"' /tmp/review-findings.jsonl 2>/dev/null)
+
+BODY_WITH_INLINE="$REVIEW_BODY"
+if [ -n "$INLINE_TEXT" ]; then
+  BODY_WITH_INLINE=$(printf '%s\n\n---\n\n### Findings (could not attach to lines)\n\n%s' "$REVIEW_BODY" "$INLINE_TEXT")
+fi
+
+jq -n \
+  --arg commit_id "$HEAD_SHA" \
+  --arg event "$REVIEW_EVENT" \
+  --arg body "$BODY_WITH_INLINE" \
+  '{commit_id: $commit_id, event: $event, body: $body}' \
+  > /tmp/pr-review-final.json
+
+gh api repos/OWNER/REPO/pulls/PR_NUMBER/reviews \
+  --input /tmp/pr-review-final.json
+```
+
+**Tier 3: Plain PR comment**
+
+If the Reviews API is completely broken, post as a plain PR comment:
+
+```bash
+gh pr comment PR_NUMBER --repo OWNER/REPO --body "$BODY_WITH_INLINE"
+```
+
+Report which tier was used in Phase 7.
 
 **Important:**
-- All inline comments (those with file:line) go in the `comments` array
-- Findings with no specific file:line go in the review `body` instead
-- If the API returns 422 (Validation Failed), check that all file paths match the PR diff and line numbers are within the diff hunks. If a specific comment causes the failure, fall back to posting it as part of the review body instead, and retry with the remaining inline comments
+- Use `jq` with `--arg`/`--argjson` for all JSON construction to avoid shell escaping issues
+- All inline comments (those with file:line) go in JSONL, general findings go in the review body
 - If the API returns 403, report the failure and suggest checking `gh` authentication and PR permissions
-- Clean up `/tmp/pr-review-payload.json` after posting
+- Clean up `/tmp/pr-review-final.json` and `/tmp/review-findings.jsonl` after posting
 
 ---
 
@@ -461,6 +467,7 @@ Present the summary:
 ## Review Summary for PR #PR_NUMBER
 
 - Review type: [COMMENT or REQUEST_CHANGES]
+- Posting tier: [1: review with inline / 2: review body-only / 3: plain comment]
 - Inline comments: N
 - General findings (in review body): N
 - Skipped: N (already commented or user choice)
@@ -477,7 +484,7 @@ Present the summary:
 [Link to the review if available from API response]
 ```
 
-If the review failed, suggest the user check their `gh` authentication and PR permissions. If specific inline comments caused a 422, note which ones were moved to the review body on retry.
+If the review failed, suggest the user check their `gh` authentication and PR permissions. If a lower tier was used, note which tier and why (e.g., "Tier 2: Reviews API rejected inline comments, posted as body-only review").
 
 ---
 
@@ -488,7 +495,7 @@ If the review failed, suggest the user check their `gh` authentication and PR pe
 | No PR for current branch | Stop with message to create PR first |
 | gh CLI not available | Stop with install instructions |
 | Review post fails (403) | Report failure, suggest checking gh auth and PR permissions |
-| Review post fails (422) | Likely a bad file path or line not in diff. Move offending inline comments to the review body and retry |
+| Review post fails (422) | Fall through to tier 2 (body-only review) or tier 3 (plain comment) |
 | No findings approved | Report "No comments to post" and exit |
 | Finding has no file:line | Include in review body instead of comments array |
 | Rate limited by GitHub API | Wait and retry with backoff |
@@ -501,10 +508,10 @@ If the review failed, suggest the user check their `gh` authentication and PR pe
 - **[via Claude] prefix**: The review body and every inline comment MUST start with `[via Claude]`
 - **Duplicate detection**: Always check existing PR comments before the interview
 - **User approval before posting**: NEVER post the review without explicit user confirmation
-- **Shell safety**: Use Python to build JSON payload - avoid shell escaping issues
+- **Shell safety**: Use `jq` with `--arg`/`--argjson` to build JSON payloads - avoids shell escaping issues
 - **Preserve user edits**: If the user modifies a comment draft, use their text exactly (with [via Claude] prefix)
 - **No file modifications**: This skill only posts review comments - it does NOT edit code
-- **Clean up temp files**: Remove `/tmp/pr-review-payload.json` after posting
+- **Clean up temp files**: Remove `/tmp/pr-review-final.json` and `/tmp/review-findings.jsonl` after posting
 
 ## Chaining from Review
 
