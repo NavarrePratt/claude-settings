@@ -35,3 +35,5 @@ agent-memory-local/
 
 # Migration skill (temporary, local only)
 skills/bd-to-br-migration/
+
+backups/
