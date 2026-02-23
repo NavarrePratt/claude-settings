@@ -33,6 +33,19 @@ After creating a bead (via /issue-create skill OR manual `br create`):
 The bead will be picked up later by atari or worked on in a future session.
 Exception: Only continue working if user explicitly says "and work on it now".
 
+# Bead Content Boundary
+
+Beads must NEVER include instructions that involve upstream/remote operations:
+- No `git push` or branch pushing
+- No `gh pr create` or PR creation
+- No `gh issue create` or GitHub issue creation
+- No posting comments, reviews, or any GitHub API writes
+
+Beads are for LOCAL work only: code changes, tests, local verification.
+Pushing commits and creating PRs are user-initiated actions that happen
+after reviewing the local work. This applies to both manual bead creation
+and beads created via /issue-plan-hybrid or similar planning skills.
+
 # Issue Tracking Summary
 
 Track all work with `br`. Create issues for test failures and bugs. Record meticulous notes for history.
