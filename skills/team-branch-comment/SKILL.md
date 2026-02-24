@@ -356,10 +356,13 @@ Submit all comments as a single PR review using the GitHub Reviews API. This gro
 
 **Step 1: Build the review body**
 
-Build the review body text (REVIEW_BODY):
+Build the review body text (REVIEW_BODY). Extract the branch title and outcome from RAW_REPORT and place them **before** the collapsed section so they are always visible:
 
 ```
-[via Claude] Code review: N findings across M files.
+[via Claude] **Branch Review: BRANCH_NAME**
+**Outcome: [APPROVED | NEEDS REVISION | MANUAL REVIEW REQUIRED]**
+
+Code review: N findings across M files.
 
 [If there are general findings with no file:line, include them here:]
 
@@ -379,7 +382,9 @@ Build the review body text (REVIEW_BODY):
 </details>
 ```
 
-If all findings have file:line locations and there are no general findings, omit the "General findings" section but always include the collapsible full report.
+The title and outcome MUST always be outside the collapsed section. Extract them from the raw report's `# Branch Review:` heading and `## Outcome:` heading.
+
+If all findings have file:line locations and there are no general findings, omit the "General findings" section but always include the title, outcome, and collapsible full report.
 
 **Step 2: Build findings JSONL**
 
