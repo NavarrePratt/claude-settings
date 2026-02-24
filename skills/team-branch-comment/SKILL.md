@@ -356,13 +356,23 @@ Submit all comments as a single PR review using the GitHub Reviews API. This gro
 
 **Step 1: Build the review body**
 
-Build the review body text (REVIEW_BODY). Extract the branch title and outcome from RAW_REPORT and place them **before** the collapsed section so they are always visible:
+Build the review body text (REVIEW_BODY). Split RAW_REPORT at the first `---` separator: everything before it (title, overview, outcome) goes at the top level; everything after goes inside the collapsible section. This avoids duplicating the header.
 
 ```
-[via Claude] **Branch Review: BRANCH_NAME**
-**Outcome: [APPROVED | NEEDS REVISION | MANUAL REVIEW REQUIRED]**
+[via Claude]
 
-Code review: N findings across M files.
+# Branch Review: BRANCH_NAME
+
+## Overview
+- **Branch**: BRANCH_NAME -> main
+- **Commits**: N commits
+- **Files Changed**: N files (+X/-Y lines)
+- **Review Team**: N Claude reviewers (Opus) + Codex validation
+- **Reviewers**: [list of roles]
+
+## Outcome: [APPROVED | NEEDS REVISION | MANUAL REVIEW REQUIRED]
+
+[Determination text]
 
 [If there are general findings with no file:line, include them here:]
 
@@ -372,19 +382,17 @@ Code review: N findings across M files.
 
 [Each general finding formatted the same as inline comments but listed in the review body]
 
----
-
 <details>
 <summary>Full review report</summary>
 
-[RAW_REPORT - the complete original review report preserved verbatim]
+[Everything from RAW_REPORT after the first --- separator]
 
 </details>
 ```
 
-The title and outcome MUST always be outside the collapsed section. Extract them from the raw report's `# Branch Review:` heading and `## Outcome:` heading.
+The header (title, overview, outcome) MUST always be outside the collapsed section and MUST NOT be repeated inside it.
 
-If all findings have file:line locations and there are no general findings, omit the "General findings" section but always include the title, outcome, and collapsible full report.
+If all findings have file:line locations and there are no general findings, omit the "General findings" section but always include the header and collapsible full report.
 
 **Step 2: Build findings JSONL**
 
