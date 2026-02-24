@@ -28,6 +28,9 @@ plugins/
 agent-memory/
 agent-memory-local/
 
+# Credentials and secrets
+.credentials.json
+
 # Local overrides (not for sharing)
 *.local.json
 *.local.md
