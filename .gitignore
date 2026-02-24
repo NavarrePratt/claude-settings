@@ -40,3 +40,7 @@ agent-memory-local/
 skills/bd-to-br-migration/
 
 backups/
+
+# Issue tracking state
+.beads/
+.atari/
