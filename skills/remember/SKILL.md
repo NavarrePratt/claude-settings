@@ -10,23 +10,20 @@ The user has triggered a memory review. They may have provided context, or they 
 ## Context from user
 $ARGUMENTS
 
-## Gate: Verify you are the daily agent
+## Locate Memory Directory
 
-MANDATORY CHECK - do this before anything else.
+Your auto memory directory path is in your system prompt, in a line like:
+> You have a persistent auto memory directory at `~/.claude/projects/<project>/memory/`.
 
-You are the daily agent ONLY if your system prompt says: "You have persistent memory at ~/.claude/agent-memory/daily/."
+Extract that path. If you cannot find it, use `~/.claude/projects/` and look for a subdirectory matching the current working directory.
 
-If that exact line is NOT in your system prompt:
-1. Respond with: "This skill is for the daily agent. Run `cc` (or `claude --agent daily`) and invoke `/remember` from there."
-2. STOP IMMEDIATELY. Do not continue to the Process section below.
-
-This means: no summarizing, no reading memory files, no proposing changes, no writing to project memory or auto memory or any other memory location. The skill is not for you. Just print the message and stop.
+Create the directory if it does not exist yet.
 
 ## Process
 
 1. **Summarize what happened this session** - briefly, 2-3 sentences max.
 
-2. **Read your current memory index** at `~/.claude/agent-memory/daily/MEMORY.md` (it may not exist yet - that is fine).
+2. **Read your current memory index** at `<memory-dir>/MEMORY.md` (it may not exist yet - that is fine).
 
 3. **Read any topic files referenced in MEMORY.md** that are relevant to this session's work.
 
