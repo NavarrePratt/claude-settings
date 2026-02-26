@@ -282,11 +282,11 @@ For each approved reply, post using the correct endpoint based on Comment Type.
 **review_comment**:
 
 ```bash
-gh api repos/OWNER/REPO/pulls/comments/COMMENT_ID/replies \
-  -X POST -f body="REPLY_TEXT"
+jq -n --arg body "REPLY_TEXT" '{body: $body, in_reply_to: COMMENT_ID}' | \
+  gh api repos/OWNER/REPO/pulls/PR_NUMBER/comments --input - -X POST
 ```
 
-Note: No PR number in the path. This posts as a threaded reply to the review comment.
+Note: Uses `in_reply_to` in the JSON body to thread the reply under the original comment.
 
 **issue_comment**:
 
@@ -327,9 +327,8 @@ REPLY_TEXT
 Use `jq` with `--arg` for safe JSON escaping of reply bodies:
 
 ```bash
-jq -n --arg body "REPLY_TEXT" '{body: $body}' | \
-  gh api repos/OWNER/REPO/pulls/comments/COMMENT_ID/replies \
-    --input - -X POST
+jq -n --arg body "REPLY_TEXT" '{body: $body, in_reply_to: COMMENT_ID}' | \
+  gh api repos/OWNER/REPO/pulls/PR_NUMBER/comments --input - -X POST
 ```
 
 ---
@@ -379,7 +378,7 @@ If there were failures, suggest checking `gh auth status` and PR permissions.
 - **User approval before posting**: NEVER post replies without explicit user confirmation
 - **Shell safety**: Use `jq` with `--arg` to build JSON payloads
 - **No file modifications**: This skill only posts replies - it does NOT edit code
-- **Correct endpoints**: review_comment uses `/pulls/comments/ID/replies` (no PR number), issue_comment and review_body use `/issues/PR_NUMBER/comments`
+- **Correct endpoints**: review_comment uses `/pulls/PR_NUMBER/comments` with `in_reply_to: COMMENT_ID` in the JSON body, issue_comment and review_body use `/issues/PR_NUMBER/comments`
 
 ## Chaining
 

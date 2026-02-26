@@ -120,12 +120,12 @@ Local operations (commit, branch, stash, rebase) are fine without approval.
 
 ## Replying to PR Review Comments
 
-To reply to a PR review comment, use the `/replies` endpoint with the comment ID:
+To reply to a PR review comment, POST to the pull comments endpoint with `in_reply_to`:
 
 ```bash
-# CORRECT - posts as a reply to an existing comment
-gh api repos/OWNER/REPO/pulls/PR_NUMBER/comments/COMMENT_ID/replies \
-  -X POST -f body="[via Claude] Your reply here"
+# CORRECT - posts as a threaded reply to an existing review comment
+jq -n --arg body "[via Claude] Your reply here" '{body: $body, in_reply_to: COMMENT_ID}' | \
+  gh api repos/OWNER/REPO/pulls/PR_NUMBER/comments --input - -X POST
 
 # WRONG - posts as a new comment in the main thread
 gh api repos/OWNER/REPO/issues/PR_NUMBER/comments \
