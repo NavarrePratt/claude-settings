@@ -5,7 +5,8 @@
     "CLAUDE_CODE_MAX_OUTPUT_TOKENS": "64000",
     "CLAUDE_CODE_EFFORT_LEVEL": "max",
     "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1",
-    "ENABLE_TOOL_SEARCH": "true"
+    "ENABLE_TOOL_SEARCH": "true",
+    "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "40"
   },
   "includeCoAuthoredBy": false,
   "permissions": {
@@ -17,7 +18,7 @@
       "/Users/npratt/git"
     ]
   },
-  "model": "opus",
+  "model": "opus[1m]",
   "enabledPlugins": {
     "gopls-lsp@claude-plugins-official": true
   },
