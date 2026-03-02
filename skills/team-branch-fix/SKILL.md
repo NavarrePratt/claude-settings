@@ -534,7 +534,7 @@ Execute this loop. Do not deviate from it.
 loop:
     result = TaskList()
     if EVERY task in result has status "completed":
-        break -> proceed to reading results files, then Phase 7
+        break -> proceed to reading results files, then Phase 7.5
     else:
         call TaskList() again (continue loop)
 ```
@@ -544,7 +544,7 @@ loop:
 You MUST NOT do any of the following while any task is not `completed`:
 - Run verification commands
 - Send shutdown requests to any fixer
-- Proceed to Phase 7 or Phase 8
+- Proceed to Phase 7.5, Phase 7, or Phase 8
 - Present results to the user
 - Call TaskUpdate on any fixer task
 
@@ -565,7 +565,86 @@ Compile a summary of all results:
 - Which findings were skipped by agents (and why)
 - Which agents failed (and what findings they owned)
 
+### Phase 7.5: Resolve Blocked Findings
+
+After collecting all fixer results (end of Phase 6) and before running verification, check whether any findings were reported as Blocked.
+
+**Step 1: Parse blocked findings**
+
+Scan each fixer's results file for the `## Blocked Findings` section. Collect all blocked entries with their finding ID, file, reason, and fallback options.
+
+If no blocked findings exist across any results file, skip directly to Phase 7.
+
+**Step 2: Present fallbacks to user**
+
+For each blocked finding, call AskUserQuestion:
+
+```
+Call AskUserQuestion tool with:
+  questions: [{
+    question: "[Finding title] in [file:line] - fixer could not implement chosen approach. Reason: [why blocked]. Choose a fallback?",
+    header: "Blocked",
+    options: [
+      { label: "Fallback A", description: "[fixer's first alternative]" },
+      { label: "Fallback B", description: "[fixer's second alternative]" },
+      { label: "Skip", description: "Leave this finding unfixed" }
+    ],
+    multiSelect: false
+  }]
+```
+
+Record each user decision:
+- **Fallback selected**: Queue for follow-up implementation. Update the finding's decision: `approach` = chosen fallback label, `approach_detail` = fallback description, `approach_source` = `user_choice`.
+- **Skip**: Mark as skipped-after-block. No further action for this finding.
+
+**Step 3: Spawn follow-up fixers (if any fallbacks approved)**
+
+If all blocked findings were skipped, proceed to Phase 7.
+
+If any fallbacks were approved:
+
+1. Create follow-up tasks via TaskCreate with subject "Follow-up: fix N findings with fallback approaches"
+2. Spawn follow-up fixer agents with the same prompt template as Phase 5. Key differences:
+   - Each finding's `approach` and `approach_detail` reflect the user's chosen fallback
+   - Follow-up fixers have the same exclusive ownership rules (same files as original fixer)
+   - Results are written to the same `/tmp/fix-TEAM_NAME/` directory with filename `{fixer-name}-followup.md`
+3. Follow-up fixers go through the same Codex self-validation step
+
+**Step 4: Poll follow-up fixers**
+
+Re-enter the Phase 6 polling loop: call TaskList repeatedly until all follow-up tasks show status `completed`. The same timeout and follow-up message rules apply.
+
+**Step 5: Check follow-up results**
+
+Read follow-up results files. If any follow-up fixer also reports a finding as Blocked:
+- Do NOT spawn another round of follow-ups (max 1 re-entry enforced)
+- Report the finding as **unresolved** - the follow-up also could not fix it
+- The user will handle it manually
+
+After follow-up completion (or if no follow-ups were needed), proceed to Phase 7.
+
+**Iterative orchestration flow:**
+
+```
+Phase 6 (poll original fixers)
+  -> collect results
+  -> Phase 7.5 (check blocked findings)
+     -> if blocked findings resolved with follow-ups:
+        -> Phase 6 polling (follow-up fixers only)
+        -> collect follow-up results
+        -> Phase 7.5 re-check (max 1 re-entry; new blocks become unresolved)
+     -> Phase 7 (verify all changes: original + follow-up)
+```
+
+**Follow-up fixer invariants:**
+- Follow-up fixers use the same prompt template, same Codex self-validation, same results format
+- Follow-up fixers write to same directory (different filename: `{name}-followup.md`)
+- Team lead NEVER directly implements fixes (preserves exclusive ownership, validation workflow, and audit trail)
+- If a follow-up fixer also reports Blocked on the same finding (max re-entry hit), report as unresolved
+
 ### Phase 7: Verify
+
+**Gating condition:** Only enter this phase when no pending follow-up fixer tasks remain. If Phase 7.5 spawned follow-up fixers, their polling and results collection must complete before verification runs. Verification covers ALL changes (original fixes + follow-up fixes).
 
 Run the discovered verification commands:
 
@@ -611,16 +690,25 @@ Present the summary to the user:
 
 ### Overview
 - Findings fixed: N / N approved
-- Findings blocked: N (approach not viable)
-- Findings skipped: N (with reasons)
+- Findings resolved via fallback: N (originally blocked, fixed after user chose fallback)
+- Findings skipped by user after block: N (user chose Skip in Phase 7.5)
+- Findings unresolved: N (follow-up fixer also blocked; max re-entry hit)
+- Findings skipped during implementation: N (conflicts with higher-priority fixes)
 - Findings deferred: N
 - Files modified: N
 
 ### Fixes Applied
 [For each fix: finding_id, finding title, file:line, approach used, what changed]
 
-### Blocked Findings
-[For each blocked finding: finding_id, title, file:line, chosen approach, why blocked, fallback options A and B]
+### Blocked Finding Resolution
+[For each finding that was originally blocked by a fixer:]
+- **Finding ID**: f-N
+- **Finding**: [title]
+- **File**: [file:line]
+- **Original approach**: [what was first attempted]
+- **Why blocked**: [fixer's reason]
+- **Resolution**: Resolved via fallback [A/B] | Skipped by user | Unresolved (follow-up also blocked)
+- **Fallback used** (if resolved): [which fallback and what changed]
 
 ### Verification Results
 - Lint: PASS/FAIL
@@ -635,6 +723,8 @@ Present the summary to the user:
 - All fixes validated: YES/NO
 - Issues found and corrected during validation: N
 ```
+
+**Commit strategy with unresolved findings:** If unresolved blocked findings remain (follow-up also blocked), note them in the commit summary but still offer commit options for the fixes that did succeed. The commit should not be held up by findings the user will handle manually.
 
 **If verification passed**, call the AskUserQuestion tool for commit strategy:
 
@@ -715,6 +805,7 @@ Report back what commits were created.
 | Verification fails | Report failure details, do NOT auto-fix |
 | Team spawn fails | Fall back to single-agent fix implementation |
 | No findings approved by user | Report "No fixes to apply" and exit |
+| Follow-up fixer also blocked | Report as unresolved (max 1 re-entry), let user handle manually |
 
 ## Guidelines
 
@@ -728,5 +819,7 @@ Report back what commits were created.
 - **Don't auto-fix verification failures**: Report and let the user decide
 - **Never mark fixer tasks**: You MUST NOT call TaskUpdate on any fixer task. Only fixers mark their own tasks completed.
 - **Results come from files**: Fixers write results to `/tmp/fix-TEAM_NAME/`. Do not use message content as results.
+- **Bounded iteration**: Phase 7.5 allows at most 1 follow-up round. If a follow-up fixer also blocks, the finding becomes unresolved. No infinite loops.
+- **Verify after all fixes**: Phase 7 verification runs only after all fixers (original + follow-up) have completed.
 
 $ARGUMENTS

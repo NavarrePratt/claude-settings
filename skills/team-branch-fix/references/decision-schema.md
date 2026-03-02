@@ -46,6 +46,13 @@ finding:
     blocked_reason: null           # why the approach was not viable (blocked only)
     fallback_a: null               # first concrete alternative considered (blocked only)
     fallback_b: null               # second concrete alternative considered (blocked only)
+
+  # Blocked finding resolution (Phase 7.5 - set by team lead)
+  resolution:
+    outcome: null                  # resolved_fallback | skipped_by_user | unresolved | null (not blocked)
+    chosen_fallback: null          # "Fallback A" or "Fallback B" (resolved_fallback only)
+    followup_fixer: null           # name of follow-up fixer agent (resolved_fallback only)
+    followup_blocked_reason: null  # why follow-up also failed (unresolved only)
 ```
 
 ## Field Lifecycle
@@ -62,6 +69,7 @@ finding:
 | `complexity_class` | Phase 2 | never |
 | `decision.*` | Phase 2 | Phase 3 (preserved during grouping) |
 | `implementation.*` | Phase 5 | never |
+| `resolution.*` | Phase 7.5 | never |
 
 ## Scope Classification
 
