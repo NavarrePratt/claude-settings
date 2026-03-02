@@ -363,7 +363,17 @@ Store discovered commands for Phase 6.
 
 2. **Create tasks** for each agent using TaskCreate:
    - Subject: "Fix N findings in [file list summary]"
-   - Description: The agent's file list, findings, and suggested fixes
+   - Description: Structured payload with file list and per-finding approach directives:
+     ```
+     Files: [file list]
+
+     Finding f-N: [title]
+       File: path:line
+       Issue: [description]
+       Suggested fix: [reviewer's suggestion]
+       Approach: [user's chosen approach or "Use suggested fix"]
+       Approach source: default | user_choice | codex_validated
+     ```
    - activeForm: "Fixing [file list summary]"
 
 3. **Spawn ALL fix agents in parallel** (all Task calls in a single message):
@@ -397,10 +407,13 @@ Do NOT modify any files outside this list.
 FINDINGS
 
 Each finding includes:
-- File and line number
-- Issue description
-- Suggested fix
-- Codex validation status
+- **Finding ID**: canonical finding_id (f-N) from review report
+- **File and line number**
+- **Issue description**
+- **Suggested fix**: the reviewer's original suggestion
+- **Approach**: the user's chosen approach description, or "Use suggested fix" for trivial findings
+- **Approach Source**: `default` | `user_choice` | `codex_validated`
+- **Codex validation status**
 
 ## Process
 
@@ -421,11 +434,33 @@ For each finding, in order of severity (Critical first, then High, Medium, Low):
 4. Verify the fix doesn't break surrounding code
 5. If a fix would conflict with a higher-priority fix you already applied, skip it and note why
 
-**Fix quality rules:**
+**Fix approach precedence** (use the first applicable rule):
+1. **User's chosen approach** (when approach_source is `user_choice` or `codex_validated`): implement exactly what the approach describes. The user selected this approach for a reason.
+2. **Suggested fix from review report** (when approach is "Use suggested fix" or approach_source is `default`): apply the reviewer's suggested fix.
+3. **Session default style** (inferred by team lead in Phase 2 Step 0): if neither above applies, follow the session's default fix style (minimal_patch, refactor, or defensive).
+4. **Minimal-change** (last resort): fix the issue with the smallest correct change.
+
+**When the chosen approach allows refactoring** (e.g., "defensive refactor", "restructure"):
+- Refactoring is allowed ONLY within your owned files
+- No public API changes unless the approach explicitly calls for it
+- Document the refactoring scope in your results file
+
+**General quality rules:**
 - Match existing code style exactly
-- Minimal changes - fix the issue, don't refactor surrounding code
-- If the suggested fix is wrong or incomplete, use your judgment for a better fix
 - Don't add unnecessary comments explaining the fix
+
+### Step 3.5: Handle Infeasible Approaches
+
+After attempting all fixes, check if any finding's chosen approach was not viable after reading the code in context. This applies to both individually-approved findings and "Fix all" batch-approved findings.
+
+**If an approach is not viable, do NOT silently pick an alternative.** Instead:
+1. Mark the finding as **Blocked** in the results file
+2. Include: why the approach is not viable given the actual code
+3. Provide 2 concrete fallback options you considered (with brief descriptions)
+4. Continue with remaining findings normally
+5. Mark your task completed as usual - blocked findings are handled by the team lead
+
+This is the safety net for hidden complexity. It is better to report a finding as blocked than to improvise a fix the user did not approve.
 
 ### Step 4: Self-Validate with Codex
 
@@ -463,16 +498,28 @@ Write your results to `/tmp/fix-TEAM_NAME/FIXER_NAME.md` using the Write tool. U
 
 ## Fixes Applied
 For each fix:
+- **Finding ID**: f-N
 - **Finding**: [original title]
 - **File**: path:line
+- **Approach used**: [chosen approach label, or "suggested fix"]
 - **Change**: What was changed
-- **Status**: Applied | Skipped (reason) | Modified (how the fix differed from suggestion)
+- **Status**: Applied | Modified (how the fix differed from approach)
+
+## Blocked Findings
+For each finding where the chosen approach was not viable:
+- **Finding ID**: f-N
+- **Finding**: [original title]
+- **File**: path:line
+- **Chosen approach**: What the user selected
+- **Why blocked**: Why this approach is not viable given the actual code
+- **Fallback A**: [concrete alternative with brief description]
+- **Fallback B**: [concrete alternative with brief description]
 
 ## Codex Validation
 [Codex validation results - confirmed clean or issues found and corrected]
 
 ## Skipped Findings
-[Any findings that couldn't be fixed, with explanation]
+[Any findings skipped due to conflicts with higher-priority fixes, with explanation]
 
 After writing the results file, mark your task completed via TaskUpdate (status: completed). The team lead will read your results from the file after all fixers have finished.
 ```
@@ -514,6 +561,7 @@ For each fixer:
 
 Compile a summary of all results:
 - Which findings were fixed (and how)
+- Which findings were blocked (approach not viable, with fallback options)
 - Which findings were skipped by agents (and why)
 - Which agents failed (and what findings they owned)
 
@@ -563,12 +611,16 @@ Present the summary to the user:
 
 ### Overview
 - Findings fixed: N / N approved
+- Findings blocked: N (approach not viable)
 - Findings skipped: N (with reasons)
 - Findings deferred: N
 - Files modified: N
 
 ### Fixes Applied
-[For each fix: finding title, file:line, what changed]
+[For each fix: finding_id, finding title, file:line, approach used, what changed]
+
+### Blocked Findings
+[For each blocked finding: finding_id, title, file:line, chosen approach, why blocked, fallback options A and B]
 
 ### Verification Results
 - Lint: PASS/FAIL
@@ -577,7 +629,7 @@ Present the summary to the user:
 - E2E: PASS/FAIL (if applicable)
 
 ### Skipped During Implementation
-[Any findings that agents couldn't fix, with explanations]
+[Any findings skipped due to conflicts with higher-priority fixes]
 
 ### Codex Validation
 - All fixes validated: YES/NO
@@ -669,8 +721,9 @@ Report back what commits were created.
 - **All Claude agents use Opus**: Set `model: "opus"` for every spawned agent
 - **Exclusive file ownership**: Never assign the same file to two agents
 - **Parallel execution**: Spawn ALL fix agents simultaneously in one message
-- **Minimal changes**: Fix the reported issue, don't refactor surrounding code
-- **Preserve user decisions**: Only fix what the user approved
+- **Respect approach precedence**: User's chosen approach > suggested fix > session default > minimal-change
+- **Preserve user decisions**: Only fix what the user approved. Block (don't improvise) when approach is not viable.
+- **Report blocked findings**: Fixer agents mark infeasible approaches as Blocked with fallback options for the team lead.
 - **Self-validate**: Each agent validates with Codex before reporting done
 - **Don't auto-fix verification failures**: Report and let the user decide
 - **Never mark fixer tasks**: You MUST NOT call TaskUpdate on any fixer task. Only fixers mark their own tasks completed.

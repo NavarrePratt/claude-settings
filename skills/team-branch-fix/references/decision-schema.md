@@ -38,6 +38,14 @@ finding:
     approach_detail: null          # code preview of chosen approach (forwarded to fixer)
     approach_source: null          # default | user_choice | codex_validated
     stance: null                   # claude | codex (disputed findings only: whose assessment won)
+
+  # Implementation result (Phase 5 - set by fixer agent)
+  implementation:
+    status: null                   # applied | blocked | skipped
+    approach_used: null            # what was actually implemented (approach label or "suggested fix")
+    blocked_reason: null           # why the approach was not viable (blocked only)
+    fallback_a: null               # first concrete alternative considered (blocked only)
+    fallback_b: null               # second concrete alternative considered (blocked only)
 ```
 
 ## Field Lifecycle
@@ -53,6 +61,7 @@ finding:
 | `complexity_score` | Phase 2 | never |
 | `complexity_class` | Phase 2 | never |
 | `decision.*` | Phase 2 | Phase 3 (preserved during grouping) |
+| `implementation.*` | Phase 5 | never |
 
 ## Scope Classification
 
