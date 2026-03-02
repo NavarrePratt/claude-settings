@@ -60,42 +60,65 @@ Record **PR_NUMBER** and any **FILTER_TEXT**.
 
 Compare local HEAD against the PR's head SHA to ensure we're on the right branch.
 
-**Step 1: Fetch PR head SHA**
+**Step 1: Fetch PR head ref and SHA**
 
 ```bash
-gh api repos/OWNER/REPO/pulls/PR_NUMBER --jq '.head.sha'
+gh api repos/OWNER/REPO/pulls/PR_NUMBER --jq '{head_sha: .head.sha, head_ref: .head.ref}'
 ```
 
-Record **PR_HEAD_SHA**.
+Record **PR_HEAD_SHA** and **PR_HEAD_REF**.
 
-**Step 2: Get local HEAD**
+**Step 2: Get local HEAD and check for uncommitted changes**
 
 ```bash
 git rev-parse HEAD
+git status --porcelain
 ```
 
-Record **LOCAL_HEAD**.
+Record **LOCAL_HEAD** and whether there are **UNCOMMITTED_CHANGES** (non-empty output from git status).
 
 **Step 3: Compare**
 
 If PR_HEAD_SHA != LOCAL_HEAD:
-- Warn the user: "Branch mismatch: PR head is `PR_HEAD_SHA` but local HEAD is `LOCAL_HEAD`."
-- Ask to confirm override via AskUserQuestion:
+- Warn the user: "Branch mismatch: PR head is `PR_HEAD_SHA` (branch `PR_HEAD_REF`) but local HEAD is `LOCAL_HEAD`."
+- If UNCOMMITTED_CHANGES is non-empty, also warn: "Note: you have uncommitted changes on the current branch that would need to be stashed or committed before switching."
+- Ask to confirm via AskUserQuestion. Build the options list dynamically:
 
+**If no uncommitted changes:**
 ```
 Call AskUserQuestion tool with:
   questions: [{
-    question: "PR head SHA does not match local HEAD. Continue anyway?",
+    question: "PR head SHA does not match local HEAD. The PR branch is `PR_HEAD_REF`. What would you like to do?",
     header: "Branch mismatch",
     options: [
+      { label: "Switch branch", description: "Run `git checkout PR_HEAD_REF` to switch to the PR branch" },
       { label: "Continue", description: "Proceed despite SHA mismatch - report will still reference PR comments" },
-      { label: "Abort", description: "Stop and let me check out the correct branch" }
+      { label: "Abort", description: "Stop and let me sort this out manually" }
     ],
     multiSelect: false
   }]
 ```
 
-If the user selects "Abort", stop immediately.
+**If uncommitted changes exist:**
+```
+Call AskUserQuestion tool with:
+  questions: [{
+    question: "PR head SHA does not match local HEAD. The PR branch is `PR_HEAD_REF`. You have uncommitted changes on the current branch. What would you like to do?",
+    header: "Branch mismatch",
+    options: [
+      { label: "Stash and switch", description: "Run `git stash` then `git checkout PR_HEAD_REF`" },
+      { label: "Continue", description: "Proceed despite SHA mismatch - report will still reference PR comments" },
+      { label: "Abort", description: "Stop and let me sort this out manually" }
+    ],
+    multiSelect: false
+  }]
+```
+
+**Handling the response:**
+- **Switch branch**: Run `git checkout PR_HEAD_REF`. If it fails, stop with the error.
+- **Stash and switch**: Run `git stash` then `git checkout PR_HEAD_REF`. If either fails, stop with the error. Note to the user that their changes are stashed.
+- **Continue**: Proceed with the import despite the mismatch.
+- **Abort**: Stop immediately.
 
 ---
 
