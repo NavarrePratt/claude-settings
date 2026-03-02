@@ -8,6 +8,20 @@ argument-hint: "[review report or path to report]"
 
 Implement code fixes for review findings using a parallel agent team. Each agent owns an exclusive set of files, implements all fixes for those files, and self-validates with Codex MCP. Runs verification (lint/test/build) after all agents complete.
 
+## Reference Files
+
+This skill uses reference files in the `references/` directory. Load referenced files
+with the Read tool before executing the relevant phase. If a reference file is missing,
+use the inline fallback instructions in the phase description.
+
+| Reference | Used in |
+|-----------|---------|
+| [complexity-rubric.md](references/complexity-rubric.md) | Phase 2 Step 1 - trivial vs complex classification |
+| [approach-generation.md](references/approach-generation.md) | Phase 2 Step 1 - generating fix approaches for complex findings |
+| [codex-validation.md](references/codex-validation.md) | Phase 2 Step 1 - two-step Codex review flow |
+| [decision-schema.md](references/decision-schema.md) | Phases 1-3 - finding data model and field lifecycle |
+| [blocked-findings.md](references/blocked-findings.md) | Phase 7.5 - blocked finding resolution protocol |
+
 ## Context
 
 - Working directory: !`pwd`
@@ -146,7 +160,24 @@ Before processing findings, analyze the review report and branch context to infe
 | Commit messages mention stability, reliability | `defensive` |
 | No strong signal | `minimal_patch` (safe default) |
 
-State the inference to the user: "Defaulting to minimal patches based on [reason]. You can override per-finding during approach selection."
+Display the inference and reason to the user in assistant text, then offer a one-click override:
+
+```
+Call AskUserQuestion tool with:
+  questions: [{
+    question: "Inferred default: [style] based on [reason]. Change?",
+    header: "Fix style",
+    options: [
+      { label: "Keep [style]", description: "Use [style] as the default for all findings" },
+      { label: "Minimal patches", description: "Smallest change that fixes each issue" },
+      { label: "Defensive fixes", description: "Fix plus guards against related failures" },
+      { label: "Case by case", description: "No default - choose approach for every finding individually" }
+    ],
+    multiSelect: false
+  }]
+```
+
+"Case by case" means no session default: every finding gets individual approach treatment regardless of complexity classification.
 
 The session default determines which approach is listed first (recommended position) when generating approaches for complex findings.
 
@@ -154,13 +185,7 @@ The session default determines which approach is listed first (recommended posit
 
 For each confirmed Critical or High finding:
 
-1. **Classify complexity**: Read ~50 lines of code around the finding and score against the [complexity rubric](references/complexity-rubric.md):
-   - +1: fix touches 3+ functions
-   - +1: multiple valid approaches apparent from code structure
-   - +1: requires new patterns/abstractions not present in codebase
-   - +1: changes public API surface
-   - +1: reviewer's suggested fix is non-obvious or lengthy (>10 lines)
-   - Score >= 2 = complex. If uncertain, classify complex.
+1. **Classify complexity**: Read ~50 lines of code around the finding and score against the [complexity rubric](references/complexity-rubric.md). Score >= 2 = complex. If uncertain, classify complex. *(Fallback if reference missing: +1 each for multi-function scope, multiple valid approaches, new patterns required, public API impact, non-obvious fix. Threshold: >= 2.)*
 
 2. **If trivial** (score < 2): Use the standard flow - call AskUserQuestion:
 
@@ -179,32 +204,9 @@ Call AskUserQuestion tool with:
   }]
 ```
 
-3. **If complex** (score >= 2): Generate 2-3 concrete approaches per [approach generation](references/approach-generation.md).
+3. **If complex** (score >= 2): Generate 2-3 concrete approaches per [approach generation](references/approach-generation.md). Present via AskUserQuestion with markdown previews (~10 lines each). Include "Validate with Codex" option per [codex validation](references/codex-validation.md). Store chosen approach in [decision schema](references/decision-schema.md).
 
-   First, output assistant text explaining what makes this complex and what each approach trades off.
-
-   Then call AskUserQuestion with markdown previews:
-```
-Call AskUserQuestion tool with:
-  questions: [{
-    question: "[Finding title] in [file:line] - which approach?",
-    header: "Approach",
-    options: [
-      { label: "[Approach 1] (Recommended)", description: "[one-line tradeoff]", markdown: "[~10 line code preview]" },
-      { label: "[Approach 2]", description: "[one-line tradeoff]", markdown: "[~10 line code preview]" },
-      { label: "Validate with Codex", description: "Get Codex assessment before choosing" },
-      { label: "Skip", description: "Don't fix this finding" }
-    ],
-    multiSelect: false
-  }]
-```
-
-   If the user selects **"Validate with Codex"**: Follow the [two-step Codex validation flow](references/codex-validation.md) - call Codex MCP with approaches and code context, then re-present approaches with Codex assessment in descriptions (no "Validate" option the second time).
-
-   Store the chosen approach in the finding's decision (see [decision schema](references/decision-schema.md)):
-   - `decision.approach`: label of chosen approach
-   - `decision.approach_detail`: the markdown preview content
-   - `decision.approach_source`: `user_choice` or `codex_validated`
+   *(Fallback if reference files missing: draft 2-3 approaches from different styles - minimal_patch, defensive, refactor. Each needs a short label, one-line description, and ~10 line code preview. Session default goes first. Include "Validate with Codex" and "Skip" options. If user validates with Codex, call mcp__codex__codex with approaches + code context, then re-present with assessments baked in. Store decision.approach, decision.approach_detail, decision.approach_source.)*
 
 **If the user selects "More info"** (trivial findings only):
 
@@ -567,80 +569,19 @@ Compile a summary of all results:
 
 ### Phase 7.5: Resolve Blocked Findings
 
-After collecting all fixer results (end of Phase 6) and before running verification, check whether any findings were reported as Blocked.
+See [blocked-findings.md](references/blocked-findings.md) for the full resolution protocol, results file format, and follow-up fixer rules.
 
-**Step 1: Parse blocked findings**
+**Process summary:**
 
-Scan each fixer's results file for the `## Blocked Findings` section. Collect all blocked entries with their finding ID, file, reason, and fallback options.
+1. Parse blocked findings from fixer results files (`## Blocked Findings` section)
+2. If none, skip to Phase 7
+3. For each blocked finding, call AskUserQuestion with Fallback A, Fallback B, and Skip options
+4. If any fallbacks approved: spawn follow-up fixers (same prompt template, same ownership, results to `{name}-followup.md`)
+5. Poll follow-up fixers via Phase 6 loop
+6. If follow-up fixer also blocks: report as **unresolved** (max 1 re-entry, no infinite loops)
+7. Proceed to Phase 7
 
-If no blocked findings exist across any results file, skip directly to Phase 7.
-
-**Step 2: Present fallbacks to user**
-
-For each blocked finding, call AskUserQuestion:
-
-```
-Call AskUserQuestion tool with:
-  questions: [{
-    question: "[Finding title] in [file:line] - fixer could not implement chosen approach. Reason: [why blocked]. Choose a fallback?",
-    header: "Blocked",
-    options: [
-      { label: "Fallback A", description: "[fixer's first alternative]" },
-      { label: "Fallback B", description: "[fixer's second alternative]" },
-      { label: "Skip", description: "Leave this finding unfixed" }
-    ],
-    multiSelect: false
-  }]
-```
-
-Record each user decision:
-- **Fallback selected**: Queue for follow-up implementation. Update the finding's decision: `approach` = chosen fallback label, `approach_detail` = fallback description, `approach_source` = `user_choice`.
-- **Skip**: Mark as skipped-after-block. No further action for this finding.
-
-**Step 3: Spawn follow-up fixers (if any fallbacks approved)**
-
-If all blocked findings were skipped, proceed to Phase 7.
-
-If any fallbacks were approved:
-
-1. Create follow-up tasks via TaskCreate with subject "Follow-up: fix N findings with fallback approaches"
-2. Spawn follow-up fixer agents with the same prompt template as Phase 5. Key differences:
-   - Each finding's `approach` and `approach_detail` reflect the user's chosen fallback
-   - Follow-up fixers have the same exclusive ownership rules (same files as original fixer)
-   - Results are written to the same `/tmp/fix-TEAM_NAME/` directory with filename `{fixer-name}-followup.md`
-3. Follow-up fixers go through the same Codex self-validation step
-
-**Step 4: Poll follow-up fixers**
-
-Re-enter the Phase 6 polling loop: call TaskList repeatedly until all follow-up tasks show status `completed`. The same timeout and follow-up message rules apply.
-
-**Step 5: Check follow-up results**
-
-Read follow-up results files. If any follow-up fixer also reports a finding as Blocked:
-- Do NOT spawn another round of follow-ups (max 1 re-entry enforced)
-- Report the finding as **unresolved** - the follow-up also could not fix it
-- The user will handle it manually
-
-After follow-up completion (or if no follow-ups were needed), proceed to Phase 7.
-
-**Iterative orchestration flow:**
-
-```
-Phase 6 (poll original fixers)
-  -> collect results
-  -> Phase 7.5 (check blocked findings)
-     -> if blocked findings resolved with follow-ups:
-        -> Phase 6 polling (follow-up fixers only)
-        -> collect follow-up results
-        -> Phase 7.5 re-check (max 1 re-entry; new blocks become unresolved)
-     -> Phase 7 (verify all changes: original + follow-up)
-```
-
-**Follow-up fixer invariants:**
-- Follow-up fixers use the same prompt template, same Codex self-validation, same results format
-- Follow-up fixers write to same directory (different filename: `{name}-followup.md`)
-- Team lead NEVER directly implements fixes (preserves exclusive ownership, validation workflow, and audit trail)
-- If a follow-up fixer also reports Blocked on the same finding (max re-entry hit), report as unresolved
+*(Fallback if reference file missing: for each blocked finding, present the fixer's two fallback options via AskUserQuestion. Spawn follow-up fixers for approved fallbacks using the Phase 5 prompt template. Max 1 follow-up round - if that also blocks, mark unresolved. Team lead never implements fixes directly.)*
 
 ### Phase 7: Verify
 
@@ -802,10 +743,15 @@ Report back what commits were created.
 |----------|----------|
 | Fix agent fails or times out | Note which findings weren't fixed, continue with others |
 | Codex MCP unavailable for an agent | Agent reports unvalidated fixes, noted in report |
+| Codex unavailable during approach validation | Note unvalidated in option description, proceed without |
+| Markdown previews don't render | Fall back to description-only options |
 | Verification fails | Report failure details, do NOT auto-fix |
 | Team spawn fails | Fall back to single-agent fix implementation |
 | No findings approved by user | Report "No fixes to apply" and exit |
-| Follow-up fixer also blocked | Report as unresolved (max 1 re-entry), let user handle manually |
+| User declines all fallback options for blocked finding | Mark as skipped in final report |
+| Follow-up fixer also blocked (max re-entry) | Report as unresolved, user handles manually |
+| Complexity classification timeout | Default to complex, proceed with approach generation |
+| Reference file missing | Use inline fallback instructions in the phase description |
 
 ## Guidelines
 
