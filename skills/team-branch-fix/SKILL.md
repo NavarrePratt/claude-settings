@@ -70,7 +70,13 @@ Obtain the review report from one of these sources (check in order):
 2. **$ARGUMENTS**: If arguments are provided, treat them as the report or a path to one
 3. **Ask the user**: If no report is available, ask the user to provide one
 
-Parse the report and extract all findings into a structured list:
+Parse the report and extract all findings into a structured list. Assign each finding a sequential `finding_id` (format: `f-1`, `f-2`, ...) and classify its `finding_scope`:
+
+- `finding_id`: Sequential identifier (`f-{N}`) assigned during parsing
+- `finding_scope`: One of:
+  - `line` - targets a specific file:line location
+  - `file` - targets a whole file (no specific line)
+  - `cross-cutting` - systemic issue not tied to a specific file (e.g., "add error handling everywhere")
 - Finding title
 - File and line number
 - Severity (Critical/High/Medium/Low)
@@ -79,6 +85,43 @@ Parse the report and extract all findings into a structured list:
 - Suggested fix
 - Codex validation status (Confirmed/Disputed/Adjusted)
 - Found by (which reviewer)
+
+See [Decision Schema](references/decision-schema.md) for the full finding data model including decision tracking fields populated in later phases.
+
+### Phase 1.5: Finding Canonicalization
+
+Before presenting findings to the user, deduplicate and group them so the interview operates on canonical findings rather than raw duplicates.
+
+**Step 1: Classify scope**
+
+For each finding, verify the `finding_scope` assigned in Phase 1:
+- Has file AND line number -> `line`
+- Has file but no line number -> `file`
+- No specific file (or references multiple files as a pattern) -> `cross-cutting`
+
+**Step 2: Group duplicates**
+
+Apply grouping rules by scope:
+
+- **`line`-scoped**: Group findings that share the same `(file, line)` AND describe the same underlying issue. Two findings from different reviewers catching the same nil dereference at the same location are duplicates. Two findings at the same line for different issues (e.g., nil check vs naming convention) are NOT duplicates.
+- **`file`-scoped**: Group findings that share the same `file` AND describe the same issue.
+- **`cross-cutting`**: Group findings that describe the same systemic concern, regardless of wording. For example, "add error handling to all API endpoints" and "missing error handling in API layer" are the same concern.
+
+**Step 3: Assign canonical IDs**
+
+For each group:
+1. Assign a sequential `group_id` (`g-1`, `g-2`, ...)
+2. Set `source_finding_ids` to the list of all member `finding_id` values
+3. Pick one finding as the canonical representative (`is_canonical: true`) - prefer the one with the most specific suggested fix
+4. Merge `found_by` lists (union of all members)
+5. Use the highest `severity` among members
+6. Use the most specific `suggested_fix` among members
+
+**Step 4: Output**
+
+Replace the raw finding list with the deduplicated canonical list. Each entry carries its `group_id` and `source_finding_ids` so downstream phases can trace back to the original findings. Only canonical findings (`is_canonical: true`) proceed to Phase 2.
+
+Announce the dedup results to the user: "Parsed N findings, deduplicated to M canonical findings (K duplicates merged)."
 
 ### Phase 2: User Interview
 
@@ -197,19 +240,24 @@ Call AskUserQuestion tool with:
 
 ### Phase 3: Build Fix Plan
 
-**First, deduplicate.** The review report may contain the same issue flagged by multiple reviewers (e.g., security and correctness reviewers both catch a nil dereference). Identify findings that reference the same file and line with the same underlying issue. Merge duplicates into a single finding, noting which reviewers flagged it. Use the most specific suggested fix among the duplicates.
+Findings arriving here are already deduplicated via Phase 1.5 canonical groups. Each finding carries a `group_id` and `source_finding_ids` from canonicalization.
 
-**Then group** all approved findings by file path. Each unique file (or tight cluster of related files) becomes one agent's work unit.
+**Use canonical groups, not raw findings.** When grouping work for agents, operate on the canonical finding list (entries where `is_canonical: true`). The `group_id` is the stable identifier passed to fixer agents and used in results tracking.
+
+**Preserve user decisions.** Each canonical finding carries `decision.disposition` and `decision.approach` from Phase 2. When building the fix plan, only include findings where `disposition == "fix"`. The `decision.approach` (if set) and `decision.approach_source` must be forwarded to the fixer agent so it respects the user's chosen approach.
+
+**Group** all approved canonical findings by file path. Each unique file (or tight cluster of related files) becomes one agent's work unit.
 
 **Grouping rules:**
 - All findings for the same file go to one agent
 - If a fix requires changes in two files that import each other, group them together
+- Cross-cutting findings (no specific file) go to a dedicated agent, or are distributed across agents if each instance targets identifiable files
 - Aim for roughly balanced work across agents, but never split a file across agents
 - Maximum ~8 files per agent to keep context manageable
 
-Record the fix plan:
-- Agent 1: [files] - [N findings]
-- Agent 2: [files] - [N findings]
+Record the fix plan (include canonical IDs for traceability):
+- Agent 1: [files] - [N findings] (group_ids: g-1, g-3, g-7)
+- Agent 2: [files] - [N findings] (group_ids: g-2, g-4)
 - ...
 
 ### Phase 4: Discover Verification Commands
