@@ -27,11 +27,17 @@ finding:
   codex_status: "Confirmed"      # Confirmed | Disputed | Adjusted
   found_by: ["security-reviewer", "correctness-reviewer"]
 
+  # Complexity classification (Phase 2)
+  complexity_score: 0              # 0-5, sum of rubric criteria
+  complexity_class: "trivial"      # trivial (score < 2) | complex (score >= 2)
+
   # User decision (Phase 2)
   decision:
-    disposition: null             # fix | skip | defer (set during interview)
-    approach: null                # specific approach when user picks non-default
-    approach_source: null         # default | user_choice | codex_validated
+    disposition: null              # fix | skip | defer (set during interview)
+    approach: null                 # label of chosen approach (complex findings only)
+    approach_detail: null          # code preview of chosen approach (forwarded to fixer)
+    approach_source: null          # default | user_choice | codex_validated
+    stance: null                   # claude | codex (disputed findings only: whose assessment won)
 ```
 
 ## Field Lifecycle
@@ -44,6 +50,8 @@ finding:
 | `source_finding_ids` | Phase 1.5 | never |
 | `is_canonical` | Phase 1.5 | never |
 | `title` through `found_by` | Phase 1 | Phase 1.5 (found_by merged) |
+| `complexity_score` | Phase 2 | never |
+| `complexity_class` | Phase 2 | never |
 | `decision.*` | Phase 2 | Phase 3 (preserved during grouping) |
 
 ## Scope Classification

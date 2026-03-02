@@ -127,9 +127,42 @@ Announce the dedup results to the user: "Parsed N findings, deduplicated to M ca
 
 **You MUST call the AskUserQuestion tool for every question below. Do NOT print questions as plain text.**
 
+See also:
+- [Complexity Rubric](references/complexity-rubric.md) - scoring criteria for trivial vs complex
+- [Approach Generation](references/approach-generation.md) - how to draft fix approaches
+- [Codex Validation](references/codex-validation.md) - two-step Codex review flow
+- [Decision Schema](references/decision-schema.md) - data model for finding decisions
+
+**Step 0: Infer session default**
+
+Before processing findings, analyze the review report and branch context to infer a default approach style. Check these signals:
+
+| Signal | Suggests |
+|--------|----------|
+| Branch name contains `fix/`, `hotfix/`, `patch/` | `minimal_patch` |
+| Most findings are Critical/High severity | `minimal_patch` |
+| Branch name contains `refactor/`, `cleanup/` | `refactor` |
+| Most findings are Medium/Low with pattern issues | `refactor` |
+| Commit messages mention stability, reliability | `defensive` |
+| No strong signal | `minimal_patch` (safe default) |
+
+State the inference to the user: "Defaulting to minimal patches based on [reason]. You can override per-finding during approach selection."
+
+The session default determines which approach is listed first (recommended position) when generating approaches for complex findings.
+
 **Step 1: Critical & High findings**
 
-For each confirmed Critical or High finding, call the AskUserQuestion tool:
+For each confirmed Critical or High finding:
+
+1. **Classify complexity**: Read ~50 lines of code around the finding and score against the [complexity rubric](references/complexity-rubric.md):
+   - +1: fix touches 3+ functions
+   - +1: multiple valid approaches apparent from code structure
+   - +1: requires new patterns/abstractions not present in codebase
+   - +1: changes public API surface
+   - +1: reviewer's suggested fix is non-obvious or lengthy (>10 lines)
+   - Score >= 2 = complex. If uncertain, classify complex.
+
+2. **If trivial** (score < 2): Use the standard flow - call AskUserQuestion:
 
 ```
 Call AskUserQuestion tool with:
@@ -146,7 +179,34 @@ Call AskUserQuestion tool with:
   }]
 ```
 
-**If the user selects "More info":**
+3. **If complex** (score >= 2): Generate 2-3 concrete approaches per [approach generation](references/approach-generation.md).
+
+   First, output assistant text explaining what makes this complex and what each approach trades off.
+
+   Then call AskUserQuestion with markdown previews:
+```
+Call AskUserQuestion tool with:
+  questions: [{
+    question: "[Finding title] in [file:line] - which approach?",
+    header: "Approach",
+    options: [
+      { label: "[Approach 1] (Recommended)", description: "[one-line tradeoff]", markdown: "[~10 line code preview]" },
+      { label: "[Approach 2]", description: "[one-line tradeoff]", markdown: "[~10 line code preview]" },
+      { label: "Validate with Codex", description: "Get Codex assessment before choosing" },
+      { label: "Skip", description: "Don't fix this finding" }
+    ],
+    multiSelect: false
+  }]
+```
+
+   If the user selects **"Validate with Codex"**: Follow the [two-step Codex validation flow](references/codex-validation.md) - call Codex MCP with approaches and code context, then re-present approaches with Codex assessment in descriptions (no "Validate" option the second time).
+
+   Store the chosen approach in the finding's decision (see [decision schema](references/decision-schema.md)):
+   - `decision.approach`: label of chosen approach
+   - `decision.approach_detail`: the markdown preview content
+   - `decision.approach_source`: `user_choice` or `codex_validated`
+
+**If the user selects "More info"** (trivial findings only):
 
 Investigate the finding in depth:
 1. Read the file around the flagged line with the Read tool (include generous context, ~50 lines around the issue)
@@ -176,24 +236,32 @@ Call AskUserQuestion tool with:
 
 **Step 2: Disputed Critical & High findings**
 
-For findings where Claude and Codex disagreed, call AskUserQuestion with both perspectives:
+For findings where Claude and Codex disagreed, resolve stance first, then handle complexity.
+
+**Stance resolution**: Call AskUserQuestion to pick whose assessment to trust:
 
 ```
 Call AskUserQuestion tool with:
   questions: [{
-    question: "[Finding title] in [file:line] - DISPUTED. Claude: [issue]. Codex: [counter]. Fix?",
+    question: "[Finding title] in [file:line] - DISPUTED. Claude: [issue]. Codex: [counter]. Whose assessment?",
     header: "Disputed",
     options: [
-      { label: "Fix per Claude", description: "Apply Claude's suggested fix" },
-      { label: "Fix per Codex", description: "Apply Codex's suggested fix" },
+      { label: "Trust Claude", description: "[Claude's position in one line]" },
+      { label: "Trust Codex", description: "[Codex's position in one line]" },
       { label: "More info", description: "Investigate both positions before deciding" },
-      { label: "Defer", description: "Fix in a later session" }
+      { label: "Skip", description: "Not a real issue" }
     ],
     multiSelect: false
   }]
 ```
 
-If "More info", follow the same investigation procedure as Step 1, but also highlight the specific disagreement between Claude and Codex with code evidence for each position. Then re-ask without the "More info" option.
+If "More info", follow the investigation procedure from Step 1 but also highlight the specific disagreement with code evidence for each position. Then re-ask without "More info".
+
+After stance is resolved, record `decision.stance` (`claude` or `codex`).
+
+**Then classify complexity** using the winning stance's suggested fix:
+- **If trivial**: Use the stance winner's suggested fix directly. Set `decision.disposition: "fix"`.
+- **If complex**: Generate 2-3 approaches within the chosen stance (approaches should align with the assessment the user trusted). Present via AskUserQuestion with markdown previews, same pattern as Step 1 complex flow.
 
 **Step 3: Medium & Low findings**
 
@@ -213,7 +281,9 @@ Call AskUserQuestion tool with:
   }]
 ```
 
-If "Review individually", present each finding with the same AskUserQuestion pattern as Step 1 (including "More info" option).
+If **"Fix all"**: Batch approve all findings in the category. Fixer agents handle implementation using the suggested fixes.
+
+If **"Review individually"**: Present each finding with the same AskUserQuestion pattern as Step 1 (including "More info" option). When a user selects "More info" for a Medium/Low finding, classify its complexity. If complex, generate approaches with the same flow as Step 1 complex findings. This is the opt-in path for approach selection on lower-severity findings.
 
 **Step 4: Summary**
 
@@ -222,6 +292,7 @@ Present the final fix plan to the user:
 - N findings skipped
 - N findings deferred
 - Files that will be modified
+- For complex findings with chosen approaches: list the finding and chosen approach label
 
 Call AskUserQuestion to confirm before proceeding:
 ```
@@ -244,7 +315,13 @@ Findings arriving here are already deduplicated via Phase 1.5 canonical groups. 
 
 **Use canonical groups, not raw findings.** When grouping work for agents, operate on the canonical finding list (entries where `is_canonical: true`). The `group_id` is the stable identifier passed to fixer agents and used in results tracking.
 
-**Preserve user decisions.** Each canonical finding carries `decision.disposition` and `decision.approach` from Phase 2. When building the fix plan, only include findings where `disposition == "fix"`. The `decision.approach` (if set) and `decision.approach_source` must be forwarded to the fixer agent so it respects the user's chosen approach.
+**Preserve user decisions.** Each canonical finding carries its full `decision` from Phase 2. When building the fix plan, only include findings where `disposition == "fix"`. Forward these decision fields to the fixer agent:
+- `decision.approach`: the label of the user's chosen approach (complex findings only)
+- `decision.approach_detail`: the code preview showing the intended fix (complex findings only)
+- `decision.approach_source`: whether the choice was `default`, `user_choice`, or `codex_validated`
+- `decision.stance`: for disputed findings, whose assessment (`claude` or `codex`) the user trusted
+
+The fixer agent must respect the chosen approach. For trivial findings without an explicit approach, the fixer uses the `suggested_fix` from the review report.
 
 **Group** all approved canonical findings by file path. Each unique file (or tight cluster of related files) becomes one agent's work unit.
 
