@@ -21,7 +21,7 @@ Before processing any findings, infer a default approach style for the session:
 | Branch name contains `refactor/`, `cleanup/` | `refactor` |
 | Most findings are Medium/Low with pattern issues | `refactor` |
 | Commit messages mention stability, reliability | `defensive` |
-| Mix of severities, no strong signal | `minimal_patch` (safe default) |
+| No strong signal | `minimal_patch` (safe default) |
 
 The session default determines which approach is listed first (recommended position).
 Users can override per-finding.
@@ -48,7 +48,7 @@ Users can override per-finding.
 For each complex finding:
 
 1. **Read code context** (~50 lines around the finding)
-2. **Draft 2-3 approaches** from different styles (at least 2 of: minimal_patch, defensive, refactor)
+2. **Draft 2 approaches** from different styles (pick 2 of: minimal_patch, defensive, refactor). Limit to 2 approaches so that the AskUserQuestion call stays within the 4-option maximum (2 approaches + "Validate with Codex" + "Skip" = 4 options).
 3. **For each approach**:
    - Write a short label (2-5 words): e.g., "Add nil guard", "Wrap with errgroup", "Extract validator"
    - Write a one-line description for the AskUserQuestion option
@@ -63,7 +63,7 @@ Before calling AskUserQuestion, output assistant text explaining:
 - What the finding is and why it's complex
 - What each approach trades off
 
-Then call AskUserQuestion with markdown previews:
+Then call AskUserQuestion with markdown previews. If the `markdown` field is not supported or previews don't render, fall back to including the code preview in the `description` field instead (prefix with "Code: ").
 
 ```
 AskUserQuestion:

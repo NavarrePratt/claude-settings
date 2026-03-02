@@ -177,7 +177,10 @@ Call AskUserQuestion tool with:
   }]
 ```
 
-"Case by case" means no session default: every finding gets individual approach treatment regardless of complexity classification.
+"Case by case" means no session default is set. Effects:
+- Complex findings still get approach generation, but no approach is pre-marked as "(Recommended)" since there's no default style to prefer.
+- Trivial findings still use the standard Fix/Skip/Defer flow - they do NOT get approach generation.
+- Fixer agents fall through to precedence rule 4 (minimal-change) instead of rule 3 (session default) for cases where no explicit approach was chosen.
 
 The session default determines which approach is listed first (recommended position) when generating approaches for complex findings.
 
@@ -204,9 +207,9 @@ Call AskUserQuestion tool with:
   }]
 ```
 
-3. **If complex** (score >= 2): Generate 2-3 concrete approaches per [approach generation](references/approach-generation.md). Present via AskUserQuestion with markdown previews (~10 lines each). Include "Validate with Codex" option per [codex validation](references/codex-validation.md). Store chosen approach in [decision schema](references/decision-schema.md).
+3. **If complex** (score >= 2): Generate 2 concrete approaches per [approach generation](references/approach-generation.md). Present via AskUserQuestion with markdown previews (~10 lines each). Include "Validate with Codex" option per [codex validation](references/codex-validation.md). Store chosen approach in [decision schema](references/decision-schema.md). Limit to 2 approaches so options stay within AskUserQuestion's 4-option maximum (2 approaches + "Validate with Codex" + "Skip").
 
-   *(Fallback if reference files missing: draft 2-3 approaches from different styles - minimal_patch, defensive, refactor. Each needs a short label, one-line description, and ~10 line code preview. Session default goes first. Include "Validate with Codex" and "Skip" options. If user validates with Codex, call mcp__codex__codex with approaches + code context, then re-present with assessments baked in. Store decision.approach, decision.approach_detail, decision.approach_source.)*
+   *(Fallback if reference files missing: draft 2 approaches from different styles - pick 2 of minimal_patch, defensive, refactor. Each needs a short label, one-line description, and ~10 line code preview. Session default goes first. Include "Validate with Codex" and "Skip" options. If user validates with Codex, call mcp__codex__codex with approaches + code context, then re-present with assessments baked in. Store decision.approach, decision.approach_detail, decision.approach_source.)*
 
 **If the user selects "More info"** (trivial findings only):
 
@@ -285,7 +288,12 @@ Call AskUserQuestion tool with:
 
 If **"Fix all"**: Batch approve all findings in the category. Fixer agents handle implementation using the suggested fixes.
 
-If **"Review individually"**: Present each finding with the same AskUserQuestion pattern as Step 1 (including "More info" option). When a user selects "More info" for a Medium/Low finding, classify its complexity. If complex, generate approaches with the same flow as Step 1 complex findings. This is the opt-in path for approach selection on lower-severity findings.
+If **"Review individually"**: Present each finding using the trivial-path AskUserQuestion (Fix/More info/Skip/Defer) - do NOT classify complexity up front for Med/Low findings. Complexity classification is deferred to the "More info" click:
+
+- If user picks **"Fix"**: use suggested fix directly (no complexity check needed).
+- If user picks **"More info"**: classify complexity. If complex (score >= 2), generate approaches with the same flow as Step 1 complex findings. If trivial, follow the standard investigation (read code, trace callers, git blame) then re-ask without "More info".
+
+This is the opt-in path for approach selection on lower-severity findings. It avoids slowing the interview with approach generation for findings the user would have accepted as-is.
 
 **Step 4: Summary**
 
@@ -316,6 +324,8 @@ Call AskUserQuestion tool with:
 Findings arriving here are already deduplicated via Phase 1.5 canonical groups. Each finding carries a `group_id` and `source_finding_ids` from canonicalization.
 
 **Use canonical groups, not raw findings.** When grouping work for agents, operate on the canonical finding list (entries where `is_canonical: true`). The `group_id` is the stable identifier passed to fixer agents and used in results tracking.
+
+**Early exit if nothing to fix.** If no canonical findings have `disposition == "fix"`, report "No fixes to apply - all findings were skipped or deferred." and skip to Phase 9 (with an empty fix summary).
 
 **Preserve user decisions.** Each canonical finding carries its full `decision` from Phase 2. When building the fix plan, only include findings where `disposition == "fix"`. Forward these decision fields to the fixer agent:
 - `decision.approach`: the label of the user's chosen approach (complex findings only)
@@ -358,6 +368,8 @@ Store discovered commands for Phase 6.
 
 ### Phase 5: Spawn Fix Team
 
+**If team creation fails** (Teammate tool returns an error): fall back to spawning a single Agent (no team) that implements all fixes sequentially. Use the same fixer prompt template but include all findings in one prompt. Skip team-related operations (TaskCreate, TaskList polling). Read the single agent's results directly.
+
 1. **Create the team**:
    ```
    Teammate(operation: "spawnTeam", team_name: "TEAM_NAME", description: "Fix implementation for BRANCH_NAME")
@@ -393,7 +405,7 @@ Store discovered commands for Phase 6.
 
 ### Fix Agent Prompt Template
 
-Each fix agent receives this prompt (substitute FILE_LIST, FINDINGS, and CWD):
+Each fix agent receives this prompt (substitute FILE_LIST, FINDINGS, CWD, TEAM_NAME, and FIXER_NAME):
 
 ```
 You are implementing code fixes for specific review findings. You have exclusive ownership of your assigned files - no other agent will touch them.
@@ -493,6 +505,8 @@ Review these code changes for correctness. The changes implement fixes for speci
 ```
 
 If Codex finds issues with your fixes, correct them and re-validate.
+
+If the Codex MCP tool is unavailable or times out, skip validation and note in your results file under Codex Validation: "Codex MCP unavailable - fixes not validated." Continue to Step 5.
 
 ### Step 5: Write Results to File
 
