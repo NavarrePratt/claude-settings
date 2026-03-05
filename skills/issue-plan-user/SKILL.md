@@ -1,6 +1,6 @@
 ---
 name: issue-plan-user
-description: Plan issues by interviewing the user with probing questions. Best when you want direct user input to refine requirements before implementation.
+description: Plan issues by interviewing the user with probing questions - no AI review, purely human-driven planning. Best when the user has strong opinions about implementation, wants full control over requirements, or when the domain knowledge lives with the user rather than in the codebase. Use for subjective decisions, product direction, or when Codex review would add noise rather than value.
 ---
 
 # User Interview Planning
@@ -78,6 +78,7 @@ Interview the user about this plan in detail using the AskUserQuestion tool. Pro
 
 ### Interview Guidelines
 
+- **Skip answered questions** - Do not re-ask what the conversation already clarifies
 - **Ask non-obvious questions** - Probe deeper into things the user might not have considered
 - **Challenge assumptions** - Question unstated beliefs about how things should work
 - **Ask about the hard parts** - Focus on areas that seem complex or risky
@@ -147,6 +148,17 @@ Key decisions from interview:
 
 Ready for implementation.
 ```
+
+## Handling Failures
+
+When the user interview reveals blocking issues or fundamental unknowns:
+1. Create a P0 meta issue titled: "Create plan for [blocker-topic]"
+2. Description must include:
+   - What was blocking and why it matters
+   - Instruction to use Explore subagent for discovery
+   - Instruction to design a fix
+   - Instruction to create implementation issues via issue-tracking skill
+3. Any implementation issues spawned from meta issues are also P0
 
 ---
 

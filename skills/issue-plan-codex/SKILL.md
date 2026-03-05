@@ -1,6 +1,6 @@
 ---
 name: issue-plan-codex
-description: Plan issues using AI debate between Claude (opus) and Codex (gpt-5.2). Best for complex or architectural work requiring deep analysis and multi-round debate.
+description: Plan issues using autonomous AI debate between Claude (opus) and Codex (gpt-5.2). Heavyweight and thorough - best for complex architectural work, large refactors, or ambiguous problems that need deep analysis. Use when the work is too important for the lightweight issue-plan or when you need maximum rigor in discovery and planning without user involvement.
 ---
 
 # Planning Issues (Codex)
@@ -109,6 +109,26 @@ Read and follow the bead creation process in `../shared/bead-workflow.md`. This 
 2. **Final Verification Issue** - Create a gating issue that depends on all implementation beads
 3. **Create Epic** - Summarize the planned work as an epic with all children linked
 4. **Publish All Beads** - Transition from deferred to open once the dependency graph is complete
+
+## Output Summary
+
+After creating and publishing beads, output a clear summary:
+
+```
+Created X bead(s) from AI debate planning (opus + codex):
+
+- bd-xxx: [title] (P2, open)
+- bd-xxx: [title] (P2, open, blocked by bd-xxx)
+- bd-xxx: [title] - final verification (P2, open, blocked by all above)
+
+Epic: bd-xxx - [epic title]
+
+Key trade-offs from debate:
+- [Trade-off 1] - Chose X because Y
+- [Trade-off 2] - Deferred Z for future optimization
+
+Ready for implementation.
+```
 
 ## Handling Failures
 

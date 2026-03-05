@@ -1,6 +1,6 @@
 ---
 name: issue-plan
-description: Plan issues using AI debate between Claude (haiku) and Codex (mini). Best for standard multi-step work requiring discovery and collaborative refinement.
+description: Plan issues using autonomous AI debate between Claude (haiku) and Codex (mini). Lightweight and fast - best for routine multi-step work where full user involvement or heavy models are unnecessary. Use when planning standard features, bug fixes, or well-understood changes that benefit from structured discovery and issue decomposition.
 ---
 
 # Planning Issues
@@ -64,7 +64,7 @@ Use multi-round refinement for thorough planning:
 ### Step 1: Initial Plan
 Use the Plan subagent with **model: "haiku"** to design implementation approach based on discovery synthesis.
 
-### Step 2: Collaborative Debate (2-4 rounds, until consensus or escalation)
+### Step 2: Collaborative Debate (2-3 rounds, until consensus)
 Claude (Haiku) and Codex (gpt-5.1-codex-mini) debate back-and-forth to refine the plan:
 
 **Round 1 - Dual Critique**:
@@ -105,6 +105,26 @@ Read and follow the bead creation process in `../shared/bead-workflow.md`. This 
 2. **Final Verification Issue** - Create a gating issue that depends on all implementation beads
 3. **Create Epic** - Summarize the planned work as an epic with all children linked
 4. **Publish All Beads** - Transition from deferred to open once the dependency graph is complete
+
+## Output Summary
+
+After creating and publishing beads, output a clear summary:
+
+```
+Created X bead(s) from AI debate planning:
+
+- bd-xxx: [title] (P2, open)
+- bd-xxx: [title] (P2, open, blocked by bd-xxx)
+- bd-xxx: [title] - final verification (P2, open, blocked by all above)
+
+Epic: bd-xxx - [epic title]
+
+Key trade-offs from debate:
+- [Trade-off 1] - Chose X because Y
+- [Trade-off 2] - Deferred Z for future optimization
+
+Ready for implementation.
+```
 
 ## Handling Failures
 
