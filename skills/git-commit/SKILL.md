@@ -139,8 +139,8 @@ Follow these seven rules for excellent commit messages (adjust for conventional 
 ## Implementation Steps
 
 1. Run `git status` to see current state
-2. Run `git diff HEAD` to see all changes
-3. Run `git log --oneline -20` to analyze recent commit style
+2. Run `git diff HEAD` to see all changes (if HEAD doesn't exist yet, use `git diff --cached` instead)
+3. Run `git log --oneline -20` to analyze recent commit style (skip if no commits yet)
    - **Determine if conventional commits are used** (look for `type:` prefix patterns)
    - Note the typical capitalization and formatting style
    - Identify any project-specific conventions
