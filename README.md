@@ -39,7 +39,7 @@ Custom skills invoked via `/skill-name`:
 
 ## Key Conventions
 
-- All work tracked via `br` (bead runner) issue tracker
+- All work tracked via [`br`](https://github.com/Dicklesworthstone/beads_rust) (beads_rust) - beads are picked up and implemented by [atari](https://github.com/NavarrePratt/atari)
 - Commits created through `/commit` skill
 - No git push or GitHub writes without explicit approval
 - Python uses `uv` for everything
