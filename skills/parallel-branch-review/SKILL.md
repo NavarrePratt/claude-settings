@@ -53,11 +53,20 @@ git log --oneline BASE_COMMIT..HEAD
 git diff --stat BASE_COMMIT..HEAD
 ```
 
+**Look up PR description** (if one exists for this branch):
+
+```bash
+gh pr view --json title,body --jq '"## " + .title + "\n\n" + .body' 2>/dev/null
+```
+
+If a PR exists, save the output as **pr_context**. If the command fails (no PR exists), set **pr_context** to empty string.
+
 Record:
 - **lines_changed**: Total lines added + removed
 - **files_changed**: List of all changed file paths
 - **commit_count**: Number of commits
 - **base_commit**: The exact commit hash (use this everywhere, not "main")
+- **pr_context**: The PR title and body if a PR exists, otherwise empty
 
 ### Phase 2: Determine Team Composition
 
@@ -147,6 +156,7 @@ Substitute these placeholders before passing to each reviewer:
 | BASE_COMMIT | Exact commit hash from Phase 1 |
 | FILE_LIST | All changed file paths, one per line |
 | CWD | Working directory |
+| PR_CONTEXT | The PR title and body from pr_context if available, otherwise the literal string "No PR description available." |
 
 ### Phase 4: Collect All Results
 
