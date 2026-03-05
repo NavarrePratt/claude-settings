@@ -396,9 +396,13 @@ If all findings have file:line locations and there are no general findings, omit
 
 **Step 2: Build findings JSONL**
 
-For each inline finding (those with file:line), write one JSON object per line to `/tmp/review-findings.jsonl`. Use `jq` for safe escaping:
+For each inline finding (those with file:line), write one JSON object per line to `/tmp/review-findings.jsonl`. Initialize the file first to avoid stale data from previous runs, then append each finding. Use `jq` for safe escaping:
 
 ```bash
+# Initialize (truncate) the file before writing findings
+> /tmp/review-findings.jsonl
+
+# Then for each inline finding:
 jq -cn --arg path "FILE_PATH" --argjson line LINE_NUMBER --arg body "COMMENT_BODY" \
   '{path: $path, line: $line, body: $body}' >> /tmp/review-findings.jsonl
 ```

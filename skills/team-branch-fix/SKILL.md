@@ -33,7 +33,7 @@ You are the team lead coordinating parallel implementation of code fixes from a 
 
 **CRITICAL: You MUST use the AskUserQuestion tool for ALL user-facing questions in Phase 2. Do NOT print questions as text output and wait for free-form responses. Every question about whether to fix, skip, or defer a finding MUST be an AskUserQuestion tool call with structured options. This is the only way to give the user a proper interactive experience.**
 
-**CRITICAL: You MUST use the Teammate tool to create an agent team and the Task tool (with team_name parameter) to spawn fix agents. Each fixer is an independent Claude agent session. Do NOT attempt workarounds if these tools are missing.**
+**CRITICAL: You MUST use the TeamCreate tool to create an agent team and the Task tool (with team_name parameter) to spawn fix agents. Each fixer is an independent Claude agent session. Do NOT attempt workarounds if these tools are missing.**
 
 ---
 
@@ -49,7 +49,7 @@ Before anything else, verify required tools and git state.
 
    Do NOT attempt workarounds. Just stop.
 
-2. **Check for the Teammate tool.** If not available, stop and tell the user:
+2. **Check for the TeamCreate tool.** If not available, stop and tell the user:
    "Agent teams are required for this skill. Enable them by setting CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1 in your Claude Code settings, then retry."
 
 **Step 2: Git state**
@@ -266,7 +266,7 @@ After stance is resolved, record `decision.stance` (`claude` or `codex`).
 
 **Then classify complexity** using the winning stance's suggested fix:
 - **If trivial**: Use the stance winner's suggested fix directly. Set `decision.disposition: "fix"`.
-- **If complex**: Generate 2-3 approaches within the chosen stance (approaches should align with the assessment the user trusted). Present via AskUserQuestion with markdown previews, same pattern as Step 1 complex flow.
+- **If complex**: Generate 2 approaches within the chosen stance (approaches should align with the assessment the user trusted). Present via AskUserQuestion with markdown previews, same pattern as Step 1 complex flow.
 
 **Step 3: Medium & Low findings**
 
@@ -368,11 +368,11 @@ Store discovered commands for Phase 6.
 
 ### Phase 5: Spawn Fix Team
 
-**If team creation fails** (Teammate tool returns an error): fall back to spawning a single Agent (no team) that implements all fixes sequentially. Use the same fixer prompt template but include all findings in one prompt. Skip team-related operations (TaskCreate, TaskList polling). Read the single agent's results directly.
+**If team creation fails** (TeamCreate returns an error): fall back to spawning a single Agent (no team) that implements all fixes sequentially. Use the same fixer prompt template but include all findings in one prompt. Skip team-related operations (TaskCreate, TaskList polling). Read the single agent's results directly.
 
 1. **Create the team**:
    ```
-   Teammate(operation: "spawnTeam", team_name: "TEAM_NAME", description: "Fix implementation for BRANCH_NAME")
+   TeamCreate(team_name: "TEAM_NAME", description: "Fix implementation for BRANCH_NAME")
    ```
 
 2. **Create tasks** for each agent using TaskCreate:
@@ -628,7 +628,7 @@ SendMessage(type: "shutdown_request", recipient: "fixer-2", content: "Fixes comp
 
 After all teammates confirm shutdown:
 ```
-Teammate(operation: "cleanup")
+TeamDelete()
 ```
 
 Clean up temp directory:

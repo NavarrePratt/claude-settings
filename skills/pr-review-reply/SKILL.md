@@ -282,11 +282,12 @@ For each approved reply, post using the correct endpoint based on Comment Type.
 **review_comment**:
 
 ```bash
-jq -n --arg body "REPLY_TEXT" '{body: $body, in_reply_to: COMMENT_ID}' | \
+jq -n --arg body "REPLY_TEXT" --argjson in_reply_to COMMENT_ID \
+  '{body: $body, in_reply_to: $in_reply_to}' | \
   gh api repos/OWNER/REPO/pulls/PR_NUMBER/comments --input - -X POST
 ```
 
-Note: Uses `in_reply_to` in the JSON body to thread the reply under the original comment.
+Note: Uses `in_reply_to` in the JSON body to thread the reply under the original comment. COMMENT_ID must be a numeric value passed via `--argjson` (not `--arg`).
 
 **issue_comment**:
 
@@ -324,10 +325,11 @@ REPLY_TEXT
 - If a POST fails with 403, report auth/permission issue and stop posting further replies.
 - If a POST fails with 422, log the error details and continue with remaining replies.
 
-Use `jq` with `--arg` for safe JSON escaping of reply bodies:
+Use `jq` with `--arg`/`--argjson` for safe JSON escaping of reply bodies:
 
 ```bash
-jq -n --arg body "REPLY_TEXT" '{body: $body, in_reply_to: COMMENT_ID}' | \
+jq -n --arg body "REPLY_TEXT" --argjson in_reply_to COMMENT_ID \
+  '{body: $body, in_reply_to: $in_reply_to}' | \
   gh api repos/OWNER/REPO/pulls/PR_NUMBER/comments --input - -X POST
 ```
 
