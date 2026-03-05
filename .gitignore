@@ -30,6 +30,7 @@ agent-memory-local/
 
 # Credentials and secrets
 .credentials.json
+mcp-servers/.env
 
 # Local overrides (not for sharing)
 *.local.json
