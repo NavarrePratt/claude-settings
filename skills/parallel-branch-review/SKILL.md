@@ -109,17 +109,17 @@ Based on lines_changed:
    **Final report template** (for Phase 5, read now):
    - `~/.claude/skills/team-branch-review/templates/final-report.md`
 
-   **Reviewer briefs** (from `~/.claude/skills/team-branch-review/reviewers/`):
+   **Reviewer briefs** (from `~/.claude/skills/shared/reviewers/`):
 
    | Reviewer name | Brief file |
    |---|---|
-   | `reviewer-security` | `reviewers/security.md` |
-   | `reviewer-correctness` | `reviewers/correctness.md` |
-   | `reviewer-architecture` | `reviewers/architecture.md` |
-   | `reviewer-simplicity` | `reviewers/simplicity.md` |
-   | `reviewer-pragmatism` | `reviewers/pragmatism.md` |
-   | `reviewer-performance` | `reviewers/performance.md` |
-   | `reviewer-testing` | `reviewers/testing.md` |
+   | `reviewer-security` | `~/.claude/skills/shared/reviewers/security.md` |
+   | `reviewer-correctness` | `~/.claude/skills/shared/reviewers/correctness.md` |
+   | `reviewer-architecture` | `~/.claude/skills/shared/reviewers/architecture.md` |
+   | `reviewer-simplicity` | `~/.claude/skills/shared/reviewers/simplicity.md` |
+   | `reviewer-pragmatism` | `~/.claude/skills/shared/reviewers/pragmatism.md` |
+   | `reviewer-performance` | `~/.claude/skills/shared/reviewers/performance.md` |
+   | `reviewer-testing` | `~/.claude/skills/shared/reviewers/testing.md` |
 
    Read ALL relevant brief files, the reviewer prompt template, and the final report template.
 
