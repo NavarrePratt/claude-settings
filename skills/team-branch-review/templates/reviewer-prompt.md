@@ -22,10 +22,7 @@ FOCUS_BRIEF
 
 ## Process
 
-### Step 1: Claim Your Task
-Check TaskList for your assigned task. Claim it with TaskUpdate (set owner to your name, status to in_progress).
-
-### Step 2: Primary Review
+### Step 1: Primary Review
 1. Understand the branch:
    - Run `git log --oneline BASE_COMMIT..HEAD` to see commits
    - Run `git diff --stat BASE_COMMIT..HEAD` for scope
@@ -41,22 +38,17 @@ Check TaskList for your assigned task. Claim it with TaskUpdate (set owner to yo
    SendMessage(type: "message", recipient: "reviewer-security", summary: "Tip: possible auth bypass", content: "TIP: In path/to/file.go:42, I noticed [brief description]. This looks like it falls in your area.")
 
 6. **Incoming tips:** You may receive tips from other reviewers. If a tip is relevant, investigate it and include findings in your report. If you already covered it, ignore it. Do not reply to tips.
-7. Send a checkpoint message to the team lead so they know you are entering the long-running Codex validation phase:
 
-   SendMessage(type: "message", recipient: "team-lead", summary: "FOCUS_AREA entering Codex validation", content: "CHECKPOINT: Entering Codex validation. N findings across M files pending validation.")
+### Step 2: Codex Validation
 
-   Replace N and M with your actual counts. This message is mandatory before proceeding to Step 3.
-
-### Step 3: Codex Validation
-
-After sending the checkpoint message, validate your own findings using the Codex MCP tool.
+Validate your findings using the Codex MCP tool.
 
 Call `mcp__codex__codex` with:
 - `sandbox`: `"read-only"`
 - `approval-policy`: `"never"`
 - `cwd`: "CWD"
 
-Use this prompt (substitute YOUR_FINDINGS with your actual findings from Step 2):
+Use this prompt (substitute YOUR_FINDINGS with your actual findings from Step 1):
 
 ```
 You are a senior code reviewer validating findings from a FOCUS_AREA specialist. Rigorously challenge each finding: confirm real issues, flag false positives, correct severity ratings, and catch anything missed within FOCUS_AREA.
@@ -105,11 +97,11 @@ Report new findings using the same format, prefixed with "NEW -".
 
 If the Codex MCP call fails, report your unvalidated findings and note that Codex validation was unavailable.
 
-### Step 3.5: Check for Peer Tips
+### Step 2.5: Check for Peer Tips
 
-Before reporting, check if you received any tips from teammates while you were in Codex validation. If a tip points to something you have not already covered, investigate it using the same process as Step 2 (read the diff, read surrounding context, trace dependencies) and validate with Codex as in Step 3. Add validated findings to your report. Skip anything you already addressed.
+Before reporting, check if you received any tips from teammates while you were in Codex validation. If a tip points to something you have not already covered, investigate it using the same process as Step 1 (read the diff, read surrounding context, trace dependencies) and validate with Codex as in Step 2. Add validated findings to your report. Skip anything you already addressed.
 
-### Step 4: Write Findings to File
+### Step 3: Write Findings to File
 
 Write your complete results to `/tmp/review-TEAM_NAME/REVIEWER_NAME.md` using the Write tool. Use this exact format:
 
@@ -128,7 +120,7 @@ For each finding:
 
 ## Codex Validation Results
 
-[Full Codex validation output from Step 3]
+[Full Codex validation output from Step 2]
 
 ## Summary
 - Raw findings: Critical: N, High: N, Medium: N, Low: N
@@ -136,5 +128,3 @@ For each finding:
 
 ## Notable Observations
 [Broader observations about patterns, quality, or concerns in your focus area]
-
-After writing the findings file, mark your task completed via TaskUpdate (status: completed). The team lead will read your findings from the file after all reviewers have finished.
