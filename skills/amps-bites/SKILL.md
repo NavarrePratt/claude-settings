@@ -1,11 +1,11 @@
 ---
 name: amps-bites
-description: Generate weekly AMPS Bites updates for the Applied Training team by pulling GitHub and Slack activity. Use when the user mentions AMPS bites, weekly update, team status update, weekly summary, or wants to post to the eng-amps-ext-staff thread. Also trigger when the user says things like "what did we do this week" or "summarize the team's work".
+description: Generate weekly AMPS Bites updates for the Applied Training team by pulling GitHub and Slack activity. Use when the user mentions AMPS bites, weekly update, team status update, weekly summary, or wants to generate an AMPS bites draft. Also trigger when the user says things like "what did we do this week" or "summarize the team's work".
 ---
 
 # AMPS Bites Generator
 
-Generate a weekly status update for the Applied Training (AT) team by collecting GitHub and Slack activity, synthesizing it into concise bullets, and posting to the weekly AMPS Bites thread.
+Generate a weekly status update for the Applied Training (AT) team by collecting GitHub and Slack activity and synthesizing it into concise bullets.
 
 ## Team Members
 
@@ -127,21 +127,4 @@ Slack highlights:
 ...
 ```
 
-The draft is what gets posted. The activity reference is just for the user to scan and decide if anything was missed or mischaracterized. Ask if they want to adjust anything before posting.
-
-### Step 5: Find Thread and Post
-
-After the user approves:
-
-1. Search #eng-amps-ext-staff for the current week's AMPS Bites thread:
-   - Use `mcp__slack__conversations_search_messages` with search_query "AMPS Bites" or "AMPS bites", filter_in_channel #eng-amps-ext-staff, filter_date_on today
-   - The thread parent message typically contains "AMPS Bites" or a Slackbot reminder about posting updates
-
-2. Post the update as a reply using `mcp__slack__conversations_add_message`:
-   - channel_id: the channel ID from the search result
-   - thread_ts: the timestamp of the parent message
-   - payload: the approved update text
-
-If no thread is found for today, check the last few days - the thread might have been posted earlier in the week. If still not found, show the final text and tell the user to post it manually.
-
-Always confirm with the user before posting to Slack.
+The draft is ready to copy-paste into Slack. The activity reference is just for the user to scan and decide if anything was missed or mischaracterized. Ask if they want to adjust anything.
