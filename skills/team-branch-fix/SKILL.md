@@ -397,7 +397,6 @@ Store discovered commands for Phase 6.
      subagent_type: "general-purpose",
      team_name: "TEAM_NAME",
      name: "fixer-1",
-     model: "opus",
      description: "Fix findings in [files]",
      prompt: "[Fix Agent Prompt Template]"
    )
@@ -769,7 +768,7 @@ Report back what commits were created.
 
 ## Guidelines
 
-- **All Claude agents use Opus**: Set `model: "opus"` for every spawned agent
+- **Model inheritance**: Do NOT set a `model` parameter on spawned agents - they inherit the global model setting automatically
 - **Exclusive file ownership**: Never assign the same file to two agents
 - **Parallel execution**: Spawn ALL fix agents simultaneously in one message
 - **Respect approach precedence**: User's chosen approach > suggested fix > session default > minimal-change

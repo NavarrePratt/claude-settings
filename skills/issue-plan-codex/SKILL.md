@@ -15,8 +15,8 @@ This command receives context from two sources:
 
 ## Tools Used
 
-- **Task (Explore subagent)** - Thorough codebase exploration with model: "opus"
-- **Task (Plan subagent)** - Implementation design with model: "opus"
+- **Task (Explore subagent)** - Thorough codebase exploration (inherits global model)
+- **Task (Plan subagent)** - Implementation design (inherits global model)
 - **mcp__codex__codex** - Cross-reference discovery with model: "gpt-5.2-codex"
 - **br CLI** - Issue creation, status management, and dependencies
 
@@ -31,7 +31,7 @@ This is a two-phase process: discovery first, then planning with collaborative d
 Use BOTH approaches for comprehensive discovery:
 
 ### Claude Explore Agents
-Use the Explore subagent with "very thorough" setting and **model: "opus"** to understand:
+Use the Explore subagent with "very thorough" setting to understand:
 1. All code related to this work (run up to 3 parallel explorations)
 2. Current architecture, patterns, and conventions
 
@@ -62,7 +62,7 @@ This summary becomes the input for Phase 2.
 Use multi-round refinement for thorough planning:
 
 ### Step 1: Initial Plan
-Use the Plan subagent with **model: "opus"** to design implementation approach based on discovery synthesis.
+Use the Plan subagent to design implementation approach based on discovery synthesis.
 
 ### Step 2: Collaborative Debate (2-4 rounds, until consensus or escalation)
 Claude (Opus) and Codex (gpt-5.2-codex) debate back-and-forth to refine the plan:

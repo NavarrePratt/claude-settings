@@ -144,7 +144,6 @@ Based on lines_changed:
      subagent_type: "general-purpose",
      team_name: "TEAM_NAME",
      name: "reviewer-security",
-     model: "opus",
      description: "Security review",
      prompt: "[reviewer-prompt.md with all placeholders substituted]"
    )
@@ -202,7 +201,7 @@ Use the report format from `~/.claude/skills/team-branch-review/templates/final-
 
 ## Guidelines
 
-- **All Claude agents use Opus**: Set `model: "opus"` for every spawned agent
+- **Model inheritance**: Do NOT set a `model` parameter on spawned agents - they inherit the global model setting automatically
 - **Parallel execution**: Spawn ALL reviewer agents simultaneously in one message
 - **Fixed base commit**: Use the exact hash from Phase 1 everywhere, never "main"
 - **Distributed Codex validation**: Each reviewer calls Codex MCP to validate their own findings (runs in parallel)

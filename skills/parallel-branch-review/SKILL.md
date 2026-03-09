@@ -130,7 +130,6 @@ Based on lines_changed:
    ```
    Task(
      subagent_type: "general-purpose",
-     model: "opus",
      run_in_background: true,
      description: "FOCUS_AREA review",
      prompt: "[reviewer-prompt.md with all placeholders substituted]"
@@ -193,7 +192,7 @@ Use the report format from `~/.claude/skills/team-branch-review/templates/final-
 
 ## Guidelines
 
-- **All Claude agents use Opus**: Set `model: "opus"` for every spawned agent
+- **Model inheritance**: Do NOT set a `model` parameter on spawned agents - they inherit the global model setting automatically
 - **Parallel execution**: Spawn ALL reviewer agents simultaneously in one message
 - **Parallel collection**: Call ALL TaskOutput simultaneously in one message
 - **Fixed base commit**: Use the exact hash from Phase 1 everywhere, never "main"
