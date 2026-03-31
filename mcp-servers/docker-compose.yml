@@ -1,7 +1,7 @@
 services:
   slack-mcp:
-    image: ghcr.io/korotovsky/slack-mcp-server:v1.1.28
-    command: ["mcp-server", "--transport", "sse"]
+    image: ghcr.io/korotovsky/slack-mcp-server:v1.2.3
+    command: ["--transport", "sse"]
     ports:
       - "127.0.0.1:3001:3001"
     environment:
