@@ -5,6 +5,7 @@ This file documents workflow standards, issue tracking practices, and code quali
 See detailed rules in:
 - @rules/issue-tracking.md - br CLI patterns and issue management
 - @rules/session-protocol.md - Session procedures and quality gates
+- @rules/kubernetes-safety.md - Never run unscoped kubectl queries on large clusters
 
 # Quick Reference
 
