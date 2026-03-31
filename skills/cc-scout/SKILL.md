@@ -15,12 +15,16 @@ Accepts optional arguments. Combine as needed.
 |----------|--------|---------|
 | `Nd` | Set scan window (default: 7 days) | `/cc-scout 14d` |
 | `--scheduled` | Non-interactive mode: skip prompts, post report to Slack self-DM | `/cc-scout --scheduled` |
+| `--load` | Load a previous report from Slack self-DM and enter interactive mode | `/cc-scout --load` |
 
 Examples:
 - `/cc-scout` - interactive scan, last 7 days
 - `/cc-scout 14d` - interactive scan, last 14 days
 - `/cc-scout --scheduled` - autonomous scan, posts report to self-DM
 - `/cc-scout --scheduled 14d` - autonomous scan, 14-day window
+- `/cc-scout --load` - load most recent report from self-DM, discuss interactively
+- `/cc-scout --load last monday` - load the report from last Monday
+- `/cc-scout --load Mar 24` - load the report closest to March 24
 
 ## Execution Modes
 
@@ -39,6 +43,23 @@ Running autonomously via a remote trigger with no user present. In this mode:
 5. End with a one-line summary of how many new discoveries and staleness alerts were found
 
 The Slack self-DM serves as an inbox the user checks at their convenience.
+
+### Load (`--load`)
+
+Load a previously posted report from the Slack self-DM and enter interactive mode. Skips all scanning phases - just reads and presents the existing report.
+
+**Finding the report:**
+
+1. Search the self-DM for reports: use `mcp__slack__conversations_search_messages` with `filter_in_im_or_mpim: "@npratt"` and `search_query: "CC Scout Report"`
+2. The user may provide a hint after `--load` in plain text (a date, a day of the week, "latest", or anything else). Interpret it naturally to find the right report. No hint means most recent.
+3. Fetch the full thread using `mcp__slack__conversations_replies` with the matched message's `thread_ts` on channel `@npratt`
+
+**After loading:**
+
+1. Combine all thread replies into a single report
+2. Present it in conversation (same as interactive mode output)
+3. Ask the user which suggestions they want to implement
+4. Proceed with implementation as directed
 
 ## Phase 1: Parallel Scan
 
@@ -170,11 +191,9 @@ After all scans complete, consolidate findings into a single report.
 
 ## Suggested Changes
 
-| # | Suggestion | Source | Impact | Effort |
-|---|-----------|--------|--------|--------|
-| 1 | ... | [who/where] | [what improves] | Low/Med/High |
-
-[For each suggestion, a brief explanation of what to change and why]
+1. [Effort] *Suggestion title* (Source) - What to change and why
+2. [Effort] *Next suggestion* (Source) - Explanation
+...
 ```
 
 ### Ranking Suggestions
@@ -203,9 +222,22 @@ Show the report in conversation. After presenting:
 
 ### Scheduled mode (`--scheduled`)
 
-Post the report to the Slack self-DM (`@npratt`) using `mcp__slack__conversations_add_message`. Format the report in Slack markdown (mrkdwn). If it exceeds Slack's message length limit (~4000 chars), split into sequential messages:
-1. First message: New Discoveries + Feature Announcements
-2. Second message: Staleness Alerts
-3. Third message: Suggested Changes table
+Post the report to the Slack self-DM (`@npratt`) using `mcp__slack__conversations_add_message` as a thread:
 
-End with: `CC Scout: {N} discoveries, {M} staleness alerts, {K} suggestions - {date range scanned}`
+1. **Parent message**: One-line header only: `CC Scout Report: {date range} - {N} discoveries, {M} staleness alerts, {K} suggestions`
+2. **Thread reply**: Skills and Plugins
+3. **Thread reply**: Patterns and Workflows
+4. **Thread reply**: Feature Announcements
+5. **Thread reply**: Staleness Alerts
+6. **Thread reply**: Suggested Changes
+
+To post thread replies, capture the `thread_ts` from the parent message response and pass it to subsequent `conversations_add_message` calls.
+
+Slack mrkdwn formatting rules - these are critical for readability:
+- Do not use markdown tables. Slack does not render them. Use numbered lists instead.
+- Each bullet point must be on its own line. Use `\n` between items.
+- Keep each thread reply focused on one section. Short messages render better than long ones.
+- Use `*bold*` for section headers and item titles (Slack mrkdwn bold, not markdown `**bold**`).
+- Use `\n\n` between the section header and the first item.
+
+If any single reply exceeds ~3000 chars, split it into additional thread replies. Prefer more shorter messages over fewer long ones.
