@@ -32,6 +32,7 @@
     }
   },
   "alwaysThinkingEnabled": true,
-  "skipDangerousModePermissionPrompt": true,
-  "effortLevel": "high"
+  "effortLevel": "high",
+  "autoDreamEnabled": true,
+  "skipDangerousModePermissionPrompt": true
 }
