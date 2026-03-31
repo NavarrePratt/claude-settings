@@ -45,12 +45,14 @@ Git notes are stored in refs/notes/commits and can be pushed to remotes. In publ
 - Customer names, account identifiers, or customer-specific data
 - Internal process names, project codenames, or roadmap references
 - Content from internal documents, design docs, or RFCs
+- Bead IDs (bd-xxx), bead names, or references to the bead tracking system. Summarize what the work was about instead.
 
 **Instead, write generically:**
 - "per internal discussion" not "per #team-channel Slack thread"
 - "the monitoring dashboard" not "grafana.internal/d/abc123"
 - "a colleague suggested" not "Aaron mentioned in Slack"
-- "internal tracking ticket" not "JIRA-1234" or "bd-xxx"
+- "internal tracking ticket" not "JIRA-1234"
+- "tracked work item to fix config loading" not "bd-042: fix config loading"
 
 **When unsure whether something is safe to include**: Stop and ask the user using AskUserQuestion before writing the note. Do not guess - the cost of leaking internal information into a public repo is high. Err on the side of asking.
 
