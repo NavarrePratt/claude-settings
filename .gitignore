@@ -1,4 +1,6 @@
 # Runtime state
+policy-limits.json
+sessions/
 telemetry/
 cache/
 paste-cache/
