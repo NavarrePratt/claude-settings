@@ -56,7 +56,7 @@ Track all work with `br`. Create issues for test failures and bugs. Record metic
 
 **Closing issues**: Always provide `--reason` with what was done and how verified. Never close if tests fail or implementation is partial.
 
-**Dependencies**: `br dep add A B --type blocks` means A must complete before B.
+**Dependencies**: `br dep add A B --type blocks` means A depends on B (B must complete before A can start).
 
 # Quality Gates
 
@@ -202,7 +202,7 @@ Track all work with `br`. Create issues for test failures and bugs. Record metic
 
 **Closing issues**: Always provide `--reason` with what was done and how verified. Never close if tests fail or implementation is partial.
 
-**Dependencies**: `br dep add A B --type blocks` means A must complete before B.
+**Dependencies**: `br dep add A B --type blocks` means A depends on B (B must complete before A can start).
 
 ## Session Protocol Summary
 

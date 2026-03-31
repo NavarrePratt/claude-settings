@@ -11,7 +11,7 @@ Track work with `br` for persistent context across sessions.
 | Checkpoint | `br update bd-xxx --notes "COMPLETED: ...\nNEXT: ..." --json` |
 | Complete work | `br close bd-xxx --reason "..." --json` |
 | View details | `br show bd-xxx --json` |
-| Add dependency | `br dep add bd-A bd-B --type blocks` |
+| Add dependency | `br dep add bd-A bd-B --type blocks` (A depends on B) |
 
 ## Create Issue
 

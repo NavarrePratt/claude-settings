@@ -78,15 +78,19 @@ After creating all implementation issues, create one final issue to run the full
    - Acceptance criteria: All tests pass, no regressions introduced
 
 2. **Set up dependencies**:
-   Use `br dep add <final-issue> <implementation-issue> --type blocks` for EACH implementation issue.
-   This ensures the final verification runs only after all implementation work is complete.
+   Use `br dep add <issue> <depends-on> --type blocks` where issue depends on depends-on.
+   The first argument is the issue that WAITS, the second is the issue that must complete first.
 
 Example:
 ```bash
-# If implementation issues are bd-001, bd-002, bd-003 and final is bd-004:
+# If implementation issues are bd-001, bd-002, bd-003 and final verification is bd-004:
+# bd-004 (final) depends on each implementation issue:
 br dep add bd-004 bd-001 --type blocks
 br dep add bd-004 bd-002 --type blocks
 br dep add bd-004 bd-003 --type blocks
+# Sequential chain: bd-002 depends on bd-001, bd-003 depends on bd-002:
+br dep add bd-002 bd-001 --type blocks
+br dep add bd-003 bd-002 --type blocks
 ```
 
 ## Create Epic
@@ -126,7 +130,7 @@ EOF
 )" --json
 ```
 
-Link all created issues to the epic as children:
+Link all created issues to the epic as children (child depends on parent):
 ```bash
 br dep add bd-xxx <epic-id> --type parent-child
 # ... repeat for each implementation issue
