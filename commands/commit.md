@@ -46,7 +46,7 @@ Process:
    - Detect conventional commits vs traditional style from git history
    - Group changes logically into atomic commits
    - Use `git add -p` when files contain multiple unrelated changes
-   - Use Write tool + `git commit -F .git/COMMIT_MSG_TMP` pattern (NEVER heredocs) to avoid ANSI escape codes
+   - Use Write tool + `git commit -F` with a unique temp file (NEVER heredocs) to avoid ANSI escape codes
    - Verify each commit with `git show --stat`
 
 3. Before committing, check if beads tracking exists:

@@ -170,8 +170,10 @@ Will embed ANSI codes around Python/shell keywords (`for`, `if`, `and`, `in`, et
 
 **Always use the Write tool + git commit -F pattern:**
 
-1. Use the Write tool to create `.git/COMMIT_MSG_TMP` with the message content
-2. Run `git commit -F .git/COMMIT_MSG_TMP` (or `git commit --amend -F .git/COMMIT_MSG_TMP`)
+1. Generate a unique filename: `.git/COMMIT_MSG_TMP_$$` where `$$` is replaced by a random suffix (use `mktemp .git/COMMIT_MSG_TMP_XXXXXX` or append `$RANDOM`). This prevents collisions when multiple Claude sessions commit simultaneously.
+2. Use the Write tool to create that file with the message content
+3. Run `git commit -F <file>` (or `git commit --amend -F <file>`)
+4. Clean up: `rm <file>` after the commit succeeds
 
 **Never use:**
 - `git commit -m "$(cat <<'EOF'...)"` - heredoc content gets syntax highlighted
