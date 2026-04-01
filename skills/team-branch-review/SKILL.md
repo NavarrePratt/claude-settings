@@ -187,8 +187,14 @@ Use the report format from `~/.claude/skills/team-branch-review/templates/final-
 
 ### Phase 6: Cleanup
 
-1. `TeamDelete()` - clean up the agent team
-2. `rm -rf /tmp/review-TEAM_NAME` - remove temp findings directory
+1. **Shut down all reviewers**: Send a shutdown request to each reviewer agent:
+   ```
+   SendMessage(to: "reviewer-NAME", message: {type: "shutdown_request"})
+   ```
+   Send all shutdown requests in a single message (parallel). Then wait for the `teammate_terminated` system notifications before proceeding. Do NOT call TeamDelete until all agents have terminated.
+
+2. `TeamDelete()` - clean up the agent team (only after all agents terminated)
+3. `rm -rf /tmp/review-TEAM_NAME` - remove temp findings directory
 
 ---
 
