@@ -1,11 +1,6 @@
 ---
-allowed-tools: Bash(git *), Edit, Read, mcp__codex__codex
 description: Thorough code review of active git changes using iterative Codex collaboration
 ---
-
-# Codex Diff Review
-
-Thorough code review of active git changes (staged and unstaged) using iterative collaboration with Codex. Iterate with Codex until it explicitly approves the changes or you reach 5 review iterations.
 
 ## Context
 
@@ -13,19 +8,30 @@ Thorough code review of active git changes (staged and unstaged) using iterative
 - Current branch: !`git branch --show-current`
 - Git status: !`git status --short`
 
-## Instructions
+## Task
 
-You are conducting a rigorous code review of uncommitted changes using the Codex MCP tool (`mcp__codex__codex`). Iterate with Codex until it approves the changes or you reach 5 review iterations.
+Run a diff review by spawning a subagent. This isolates all Codex round-trips, diff reading, and fix iterations from the main conversation context.
+
+Launch a **foreground** general-purpose subagent with the prompt below. Substitute:
+- **CWD** with the working directory
+- **USER_INSTRUCTIONS** with $ARGUMENTS below (or "None" if empty)
+
+When the subagent finishes, relay its final summary to the user verbatim.
+
+**Subagent prompt:**
+
+You are conducting a rigorous code review of uncommitted changes in CWD.
+
+You will iterate with Codex MCP until it approves the changes or you reach 5 review iterations.
 
 ### Step 1: Initial Review Request
 
-Call `mcp__codex__codex` with these parameters:
+Call `mcp__codex__codex` with:
 - `sandbox`: `read-only`
 - `approval-policy`: `never`
-- `cwd`: The current working directory (from Context above)
-- `prompt`: The review prompt below
+- `cwd`: CWD
 
-**Review Prompt for Codex:**
+Prompt for Codex:
 
 ```
 You are a senior code reviewer conducting a thorough review of uncommitted git changes.
@@ -44,7 +50,7 @@ Run these commands to understand the changes:
 ### Step 2: Gather and Review
 
 **For large diffs (>500 lines changed or >10 files):**
-Review incrementally to avoid overwhelming context:
+Review incrementally:
 - Review by file: `git diff HEAD -- <filepath>`
 - Focus on the most critical/complex files first
 
@@ -85,7 +91,7 @@ If Codex responds with "NEEDS REVISION":
 1. For each issue, evaluate if it's valid
 2. Fix valid Critical/High issues immediately using the Edit tool
 3. Fix valid Medium/Low issues if the fix is straightforward
-4. Document any issues you disagree with (you'll include reasoning in re-review)
+4. Document any issues you disagree with (include reasoning in re-review)
 
 ### Step 3: Re-Review Loop
 
@@ -97,13 +103,11 @@ After making fixes, call `mcp__codex__codex` again with the same parameters and 
 4. Instructions to re-run `git diff HEAD` to see the updated state
 5. Same review criteria and response format (APPROVED/NEEDS REVISION)
 
-**Repeat Steps 2-3 until:**
-- Codex responds with "APPROVED", OR
-- You reach iteration 5 (stop and report remaining issues)
+Repeat Steps 2-3 until Codex responds with "APPROVED" or you reach iteration 5.
 
 ### Step 4: Final Summary
 
-Produce this summary:
+Produce ONLY this summary (no other output):
 
 ```markdown
 ## Codex Diff Review Summary
@@ -124,23 +128,17 @@ Produce this summary:
 [Summarize the main categories of issues Codex identified and how they were resolved]
 
 ### Remaining Notes
-[Any caveats, deferred issues, documented disagreements, or recommendations]
+[Any caveats, deferred issues, or recommendations]
 ```
 
-## Guidelines
+### Guidelines
 
-- **Let Codex gather diffs**: Do not embed diffs in the prompt - Codex will run git commands itself
-- **Always set cwd**: Pass the working directory to ensure Codex operates in the correct repository
-- **Always re-review after fixes**: Codex should re-run git diff to see updated state
-- **Preserve user intent**: Address concerns without changing the fundamental approach
-- **Document disagreements**: If you think an issue is a false positive, explain why in the re-review and summary
-- **Show your work**: The user should see exactly what changed and why
-- **Handle errors**: If the Codex tool fails, report the error and stop
+- Let Codex gather diffs via git commands - do not embed diffs in prompts
+- Always re-review after fixes so Codex sees the updated state
+- Preserve user intent - address concerns without changing the fundamental approach
+- Document disagreements with reasoning
+- Each Codex call is a fresh session - include context about what changed
 
-## Notes
-
-- Each Codex call is a fresh session. Re-review prompts must include context about what changed.
-- The `read-only` sandbox allows git commands but prevents file modifications by Codex itself.
-- File edits are made by Claude (the outer agent) using the Edit tool, not by Codex.
+User instructions: USER_INSTRUCTIONS
 
 $ARGUMENTS

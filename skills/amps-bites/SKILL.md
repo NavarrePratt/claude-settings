@@ -5,126 +5,25 @@ description: Generate weekly AMPS Bites updates for the Applied Training team by
 
 # AMPS Bites Generator
 
-Generate a weekly status update for the Applied Training (AT) team by collecting GitHub and Slack activity and synthesizing it into concise bullets.
+Generate a weekly status update by scanning GitHub PRs and Slack channels, then synthesizing into concise bullets.
 
-## Team Members
+This skill runs as a subagent to keep the raw API responses (dozens of PRs, Slack messages) out of the main conversation context.
 
-| Name | GitHub | Slack display name |
-|------|--------|--------------------|
-| Aaron Batilo | abatilo | abatilo |
-| Navarre Pratt | NavarrePratt | npratt |
+## Instructions
 
-## Tracked Projects
+### Step 1: Spawn Collection Subagent
 
-Always check for updates on these projects. If there's meaningful progress, include a bullet. If nothing happened that week, skip it - don't force a mention.
+Read `references/instructions.md` (relative to this skill's directory) with the Read tool to get the full procedure.
 
-| Project | What to look for |
-|---------|-----------------|
-| Aviato / CoreWeave Sandbox | Customer-facing name is "CoreWeave Sandbox". Repos: aviato, aviato-deploy, cwsandbox-client, kabinet-charts. Slack: #aviato is the best channel for project-level updates. Look for: feature work, customer onboarding, private preview milestones, docs updates |
+Then launch a **foreground** general-purpose subagent with a prompt that includes:
+1. The full content from `references/instructions.md`
+2. The working directory (for any repo-local context)
+3. Any user arguments from $ARGUMENTS below
 
-## Output Format
+The subagent handles all GitHub API calls, Slack MCP scanning, synthesis, and draft formatting.
 
-The update is a short reply in the weekly AMPS Bites thread in #eng-amps-ext-staff. Format:
+### Step 2: Present Results
 
-```
-AT:
- Bullet one - concise summary of meaningful work
- Bullet two - another item
- Bullet three - etc
-```
+When the subagent returns, present its output (draft + activity reference) to the user. Ask if they want to adjust anything before posting.
 
-The audience is senior staff across AMPS - they want to know what moved the needle this week, not a changelog. Write like you're telling a coworker what happened over coffee. 3-5 bullets max.
-
-Guidelines:
-- Project-level milestones, not technical stats (no "merged 28 PRs")
-- Plain language, no jargon-heavy PR titles
-- Don't list everything - pick what matters
-- Casual and direct, not promotional. This is not a promo packet.
-- If a tracked project had progress, lead with it
-
-## Procedure
-
-### Step 1: Collect GitHub Activity
-
-Use the `gh` CLI to pull PRs from the past 7 days for each team member across the coreweave org. Run these in parallel:
-
-```bash
-# Merged PRs - abatilo
-gh search prs --author=abatilo --owner=coreweave --merged-at=">=$(date -v-7d +%Y-%m-%d)" --limit=50 --json title,repository,url,closedAt
-
-# Merged PRs - NavarrePratt
-gh search prs --author=NavarrePratt --owner=coreweave --merged-at=">=$(date -v-7d +%Y-%m-%d)" --limit=50 --json title,repository,url,closedAt
-
-# Opened PRs (not yet merged) - abatilo
-gh search prs --author=abatilo --owner=coreweave --created=">=$(date -v-7d +%Y-%m-%d)" --state=open --limit=30 --json title,repository,url,createdAt
-
-# Opened PRs (not yet merged) - NavarrePratt
-gh search prs --author=NavarrePratt --owner=coreweave --created=">=$(date -v-7d +%Y-%m-%d)" --state=open --limit=30 --json title,repository,url,createdAt
-```
-
-Note: macOS `date` uses `-v-7d` for 7 days ago. If that fails, try `date -d '7 days ago'` (GNU).
-
-### Step 2: Collect Slack Activity
-
-Use the Slack MCP tools. Run these searches in parallel:
-
-**Per-person activity** (broad search across all channels):
-- `mcp__slack__conversations_search_messages` with `filter_users_from` set to each user's display name (@abatilo, @npratt)
-- Set `filter_date_after` to 7 days ago (YYYY-MM-DD format)
-- Limit to 20-30 messages per person
-
-**Tracked project channels** (for project-level context the team may not have authored):
-- Pull recent history from channels listed in the tracked projects table (e.g., #aviato)
-- Use `mcp__slack__conversations_history` with limit of 1w
-- This catches updates from other contributors, customer feedback, and decisions that inform the project bullet
-
-Skim messages for themes: what projects are being discussed, what shipped, blockers, decisions. Ignore casual chatter and short replies - focus on substantive messages about work.
-
-### Step 3: Synthesize
-
-Start with the tracked projects table - check if any had meaningful progress this week. Then look at the rest of the activity for anything else worth mentioning.
-
-Think at the project level: what milestones were hit, what's now possible that wasn't before, what moved forward in a way that matters. Group related PRs and Slack threads into a single narrative bullet. 3-5 bullets max.
-
-Good bullet: "Aviato rename to CoreWeave Sandbox is done - client, docs, and charts all updated"
-Bad bullet: "Merged 28 PRs across cwsandbox-client, aviato, ark, actions, docs, kabinet-charts"
-
-Do NOT include:
-- PR counts or technical stats
-- Raw PR titles or commit messages
-- Trivial changes (typo fixes, dependency bumps)
-- Work that hasn't meaningfully progressed
-- Anything that reads like a promo packet or changelog
-
-### Step 4: Present Draft
-
-Present two sections. The first is the actual update ready to post. The second is a reference section with the raw activity so the user can jog their memory and tweak the draft.
-
-```
-## Draft
-
-AT:
- [bullet 1]
- [bullet 2]
- ...
-
-## Activity Reference
-
-**[Team member name]**
-PRs merged:
-- [PR title] (repo) - [url]
-- ...
-
-PRs open:
-- [PR title] (repo) - [url]
-- ...
-
-Slack highlights:
-- [channel] - [brief summary of substantive message]
-- ...
-
-**[Next team member]**
-...
-```
-
-The draft is ready to copy-paste into Slack. The activity reference is just for the user to scan and decide if anything was missed or mischaracterized. Ask if they want to adjust anything.
+$ARGUMENTS

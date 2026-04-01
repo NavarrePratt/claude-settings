@@ -1,11 +1,6 @@
 ---
-allowed-tools: Bash(git *), Edit, Read, mcp__codex__codex
 description: Thorough code review of all commits on current branch vs main using Codex
 ---
-
-# Codex Branch Review
-
-Thorough code review of all commits on the current branch compared to main using iterative collaboration with Codex. Use this command before creating a PR to get a rigorous review of all branch changes.
 
 ## Context
 
@@ -13,19 +8,32 @@ Thorough code review of all commits on the current branch compared to main using
 - Current branch: !`git branch --show-current`
 - Base commit: !`git merge-base HEAD origin/main 2>/dev/null || git merge-base HEAD main 2>/dev/null || echo "main"`
 
-## Instructions
+## Task
 
-You are conducting a rigorous code review of all changes on this branch using the Codex MCP tool (`mcp__codex__codex`). This review covers the entire branch - all commits since diverging from main. Iterate with Codex until it approves the changes or you reach 5 review iterations.
+Run a full branch review by spawning a subagent. This isolates all Codex round-trips, diff reading, and fix iterations from the main conversation context.
+
+Launch a **foreground** general-purpose subagent with the prompt below. Substitute:
+- **CWD** with the working directory
+- **BRANCH_NAME** with the current branch
+- **BASE_COMMIT** with the base commit
+- **USER_INSTRUCTIONS** with $ARGUMENTS below (or "None" if empty)
+
+When the subagent finishes, relay its final summary to the user verbatim.
+
+**Subagent prompt:**
+
+You are conducting a rigorous code review of all changes on branch BRANCH_NAME since BASE_COMMIT, in working directory CWD.
+
+You will iterate with Codex MCP until it approves the changes or you reach 5 review iterations.
 
 ### Step 1: Initial Review Request
 
-Call `mcp__codex__codex` with these parameters:
+Call `mcp__codex__codex` with:
 - `sandbox`: `read-only`
 - `approval-policy`: `never`
-- `cwd`: The current working directory (ensures Codex operates in the correct repo)
-- `prompt`: The review prompt below (substitute BRANCH_NAME and BASE_COMMIT from Context above)
+- `cwd`: CWD
 
-**Review Prompt for Codex:**
+Prompt for Codex:
 
 ```
 You are a senior code reviewer conducting a thorough pre-PR review of a feature branch.
@@ -46,7 +54,7 @@ Run these commands to understand the branch:
 ### Step 2: Gather and Review
 
 **For large branches (>500 lines changed or >10 files):**
-Review incrementally to avoid overwhelming context:
+Review incrementally:
 - Review commit-by-commit: `git show <commit_hash>`
 - Or review by file: `git diff BASE_COMMIT..HEAD -- <filepath>`
 - Focus on the most critical/complex files first
@@ -90,9 +98,7 @@ If Codex responds with "NEEDS REVISION":
 1. For each issue, evaluate if it's valid
 2. Fix valid Critical/High issues immediately using the Edit tool
 3. Fix valid Medium/Low issues if the fix is straightforward
-4. Document any issues you disagree with (you'll include reasoning in re-review)
-
-**Note**: After making fixes, you may need to amend the last commit or create a new fixup commit depending on the nature of the changes.
+4. Document any issues you disagree with (include reasoning in re-review)
 
 ### Step 3: Re-Review Loop
 
@@ -104,13 +110,11 @@ After making fixes, call `mcp__codex__codex` again with the same parameters and 
 4. Instructions to re-run git diff to see the updated state
 5. Same review criteria and response format (APPROVED/NEEDS REVISION)
 
-**Repeat Steps 2-3 until:**
-- Codex responds with "APPROVED", OR
-- You reach iteration 5 (stop and report remaining issues)
+Repeat Steps 2-3 until Codex responds with "APPROVED" or you reach iteration 5.
 
 ### Step 4: Final Summary
 
-Produce this summary:
+Produce ONLY this summary (no other output):
 
 ```markdown
 ## Codex Branch Review Summary
@@ -130,34 +134,26 @@ Produce this summary:
 - Disagreements documented: [count]
 
 ### Changes Made During Review
-[List each code change made to address review feedback, with file:line references and which commit was affected]
+[List each code change made to address review feedback, with file:line references]
 
 ### Review Concerns Addressed
 [Summarize the main categories of issues Codex identified and how they were resolved]
 
 ### Commit Recommendations
-[Any suggestions for commit reorganization - squashing, splitting, rewording]
+[Any suggestions for commit reorganization]
 
 ### Remaining Notes
-[Any caveats, deferred issues, documented disagreements, or recommendations]
+[Any caveats, deferred issues, or recommendations]
 ```
 
-## Guidelines
+### Guidelines
 
-- **Let Codex gather diffs**: Do not embed diffs in the prompt - Codex will run git commands itself
-- **Always set cwd**: Pass the working directory to ensure Codex operates in the correct repository
-- **Review the whole branch**: Consider how all commits work together, not just individual changes
-- **Always re-review after fixes**: Codex should re-run git diff to see updated state
-- **Preserve user intent**: Address concerns without changing the fundamental approach
-- **Document disagreements**: If you think an issue is a false positive, explain why in the re-review and summary
-- **Show your work**: The user should see exactly what changed and why
-- **Handle errors**: If the Codex tool fails, report the error and stop
-- **Commit hygiene**: If fixes are made, suggest whether to amend or create fixup commits
+- Let Codex gather diffs via git commands - do not embed diffs in prompts
+- Always re-review after fixes so Codex sees the updated state
+- Preserve user intent - address concerns without changing the fundamental approach
+- Document disagreements with reasoning
+- Each Codex call is a fresh session - include context about what changed
 
-## Notes
-
-- Each Codex call is a fresh session. Re-review prompts must include context about what changed.
-- The `read-only` sandbox allows git commands but prevents file modifications by Codex itself.
-- File edits are made by Claude (the outer agent) using the Edit tool, not by Codex.
+User instructions: USER_INSTRUCTIONS
 
 $ARGUMENTS
