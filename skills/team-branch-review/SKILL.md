@@ -173,9 +173,11 @@ Substitute these placeholders before passing to each reviewer:
 
 ### Phase 4: Wait for All Reviewers to Complete
 
-Poll for findings files at `/tmp/review-TEAM_NAME/{reviewer-name}.md`. When all expected files exist, proceed to Phase 5. If a file has not appeared after extended waiting, note the gap and proceed with available findings.
+Wait for each reviewer to go idle (indicating they finished their work). Do NOT poll for findings files using bash loops with sleep - this violates the monitoring rule in `~/.claude/rules/monitoring.md`.
 
-Once all files are present, read each one and compile all findings into a single list tagged by reviewer.
+Teammates send idle notifications automatically when their turn ends. As each reviewer goes idle, check if their findings file exists at `/tmp/review-TEAM_NAME/{reviewer-name}.md`. Once all expected files exist, read each one and compile all findings into a single list tagged by reviewer.
+
+If a reviewer goes idle but did not produce a findings file, note the gap in the final report and proceed with available findings.
 
 ### Phase 5: Synthesize Final Report
 
