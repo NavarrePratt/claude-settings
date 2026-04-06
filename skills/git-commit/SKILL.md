@@ -1,6 +1,6 @@
 ---
 name: git-commit
-description: Create logically grouped, atomic git commits with well-formatted commit messages following best practices. Use this skill when you need to commit changes to a git repository with proper message formatting and atomic grouping.
+description: Create logically grouped, atomic git commits with well-formatted commit messages following best practices. Use this skill when you need to commit changes to a git repository with proper message formatting and atomic grouping. After the skill completes, read the git note on HEAD (`git notes show HEAD`) and check for an "Open Questions" section. If it contains any questions (not just "None"), use AskUserQuestion to loop through each one with the user so unresolved decisions get discussed rather than buried in git notes.
 allowed-tools:
   - Bash
   - Read
@@ -202,3 +202,4 @@ Look for `033 [` sequences which indicate ANSI codes. Clean commits show only pr
 - Use `git add -p` for interactive staging when files contain multiple unrelated changes
 - Keep commits focused and atomic - one logical change per commit
 - If in doubt about whether to use conventional commits, look at the last 20-30 commits for patterns
+
