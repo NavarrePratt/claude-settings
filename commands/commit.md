@@ -20,7 +20,7 @@ If the conversation has no relevant context (e.g., the user just ran `/commit` c
 
 ### Step 2: Spawn Commit Subagent
 
-Launch a **foreground** general-purpose subagent with the prompt below. Before spawning:
+Launch a **foreground** general-purpose subagent with the prompt below. Pass your current session's permission mode via the Agent tool's `mode` parameter so the subagent inherits it. Before spawning:
 1. Replace **CWD** with the working directory from Context
 2. Replace **BRANCH** with the branch from Context
 3. Replace **SESSION_CONTEXT** with the summary from Step 1
