@@ -730,7 +730,24 @@ For each fix, identify which commit on the branch introduced the code being fixe
 4. Create a fixup commit: `git commit --fixup=<target-commit-hash>`
 5. Repeat for each fix
 
-After all fixup commits are created, inform the user they can run `git rebase -i --autosquash BASE_COMMIT` to fold them in.
+After all fixup commits are created, call AskUserQuestion to offer running the rebase:
+
+```
+Call AskUserQuestion tool with:
+  questions: [{
+    question: "Fixup commits created. Squash them into the original commits now?",
+    header: "Autosquash",
+    options: [
+      { label: "Run rebase (Recommended)", description: "Run git rebase -i --autosquash BASE_COMMIT with GIT_SEQUENCE_EDITOR=true to auto-squash" },
+      { label: "I'll do it myself", description: "Run git rebase -i --autosquash BASE_COMMIT manually when ready" }
+    ],
+    multiSelect: false
+  }]
+```
+
+If the user selects "Run rebase": execute `GIT_SEQUENCE_EDITOR=true git rebase -i --autosquash BASE_COMMIT` and report the result. If the rebase fails (e.g., conflicts), report the error and suggest the user resolve manually.
+
+If the user selects "I'll do it myself": report the exact command they need to run.
 
 ### If "Single fix commit":
 Stage all changed files and use the /commit skill to create one commit summarizing all fixes.
