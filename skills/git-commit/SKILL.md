@@ -135,6 +135,14 @@ Follow these seven rules for excellent commit messages (adjust for conventional 
 - `wip`
 - `Update file.js`
 - `feat added new feature` (incorrect format - missing colon)
+- `Add 7 tests for auth module` (fragile count - goes stale if tests change before push)
+- `Update 3 config files for new logging` (unnecessary count - the diff shows which files)
+
+### No Fragile Counts
+
+Never include specific counts of items (tests, files, functions, endpoints, etc.) in commit
+subjects or bodies. These counts go stale before the commit is even pushed - a rebase, amend,
+or fixup changes the number and the message becomes a lie. Describe what was done, not how many.
 
 ## Implementation Steps
 
