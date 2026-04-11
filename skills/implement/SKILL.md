@@ -605,10 +605,10 @@ using the algorithm documented in references/pr-description.md:
   Explain what this PR accomplishes and why. Do not mention bead IDs or
   internal tracking. Frame in terms of user-facing or system-level impact.
 
-- **CHANGES_LIST**: bulleted list of significant changes grouped by
-  functional area (e.g., "Skill definition", "Templates", "Reference docs").
-  NOT grouped by bead or commit. Derive from `git diff --stat` and
-  `git log --oneline`.
+- **DESIGN_DECISIONS**: key tradeoffs and decisions made during
+  implementation, with reasoning. This is the primary entry point for
+  reviewers. Do not list files changed or restate the diff. See
+  `references/pr-description.md` for the full algorithm.
 
 - **BEAD_TABLE**: markdown table of all beads from the execution plan:
 

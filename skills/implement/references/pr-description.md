@@ -28,7 +28,7 @@ placeholders:
 | Placeholder | Content |
 |-------------|---------|
 | CHANGES_SUMMARY | 2-3 sentences: what this PR accomplishes and why. Derived from the epic description, not a list of beads. |
-| CHANGES_LIST | Bulleted list of significant changes grouped by functional area. NOT grouped by bead or commit. |
+| DESIGN_DECISIONS | Key tradeoffs and decisions made during implementation, with reasoning. Entry point for reviewers. |
 | BEAD_TABLE | Markdown table of all beads with ID, title, and status (Closed or Skipped with reason). |
 | REVIEW_SUMMARY | One-line or short block summarizing the review outcome from Phase 4. |
 | VERIFICATION_RESULTS | List of verification commands run and their results (PASS/FAIL). |
@@ -50,24 +50,33 @@ Example:
 > by /team-branch-fix with bounded iteration, catching issues before PR
 > creation.
 
-## Generating the Changes List (CHANGES_LIST)
+## Generating Design Decisions (DESIGN_DECISIONS)
 
-Group changes by functional area, not by bead or by commit.
+This section is the primary entry point for reviewers - both human and agent.
+Surface the key tradeoffs and decisions so reviewers can critique the reasoning
+before diving into code. Agent-based reviewers benefit from having tradeoff
+context upfront instead of rediscovering it from the diff.
 
-1. Review `git diff --stat main..HEAD` to understand the scope
-2. Read commit messages with `git log --oneline main..HEAD`
-3. Categorize changes into functional areas (e.g., "Skill definition",
-   "Templates", "Reference docs", "Error handling")
-4. Write one bullet per significant change within each area
-5. Omit trivial formatting or whitespace changes
+1. Review the implementation context from Phases 1-4: what approaches were
+   considered, what was chosen, and why
+2. Identify decisions where a reasonable person might have chosen differently
+3. Write each decision as a short paragraph: the choice made, alternatives
+   considered (if any), and the reasoning
+4. Focus on architectural choices, API design, error handling strategy,
+   performance tradeoffs - not mechanical details
+5. Do NOT list files changed or restate what the diff shows
 
 Example:
 ```markdown
-- Add review-fix-pipeline.md reference with pre-review checks, outcome
-  parsing, and bounded iteration rule
-- Wire Phase 4 into SKILL.md with /team-branch-review and /team-branch-fix
-  invocation
-- Add error handling entries for review pipeline failures
+Bounded the review-fix loop to 2 iterations rather than running until clean.
+Unbounded loops risk burning tokens on diminishing returns when the reviewer
+and fixer disagree on style issues. Two passes catches real bugs while keeping
+cost predictable.
+
+Chose to invoke /team-branch-review as a skill rather than calling the agent
+team directly. This keeps the review pipeline decoupled from /implement so
+either can evolve independently, at the cost of slightly less control over
+reviewer configuration.
 ```
 
 ## Generating the Bead Table (BEAD_TABLE)

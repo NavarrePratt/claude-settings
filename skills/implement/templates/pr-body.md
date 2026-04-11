@@ -2,9 +2,9 @@
 
 CHANGES_SUMMARY
 
-## Changes
+## Design Decisions
 
-CHANGES_LIST
+DESIGN_DECISIONS
 
 ## Implementation Details
 
