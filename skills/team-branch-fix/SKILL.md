@@ -537,35 +537,34 @@ For each finding where the chosen approach was not viable:
 [Any findings skipped due to conflicts with higher-priority fixes, with explanation]
 
 After writing the results file, mark your task completed via TaskUpdate (status: completed). The team lead will read your results from the file after all fixers have finished.
+
+After marking your task completed, your work is done. Do not wait for further instructions, attempt additional fixes, or offer to help with other tasks.
 ```
 
 ### Phase 6: Wait for All Agents to Complete
 
 **CRITICAL: You MUST NOT call TaskUpdate to change the status of any fixer task.** Only the fixer agent that owns a task may call TaskUpdate on it. If you believe a fixer is stuck, send them a message - do not mark their task completed yourself.
 
-Execute this loop. Do not deviate from it.
+Wait for fixer agents to complete using idle notifications (the same pattern as team-branch-review Phase 4). Do NOT use a tight TaskList polling loop.
 
-```
-loop:
-    result = TaskList()
-    if EVERY task in result has status "completed":
-        break -> proceed to reading results files, then Phase 7.5
-    else:
-        call TaskList() again (continue loop)
-```
+**How it works:** Teammates send idle notifications automatically when their turn ends. As each fixer goes idle, check TaskList to see if their task status is `completed`. Track which fixers have completed.
 
-**If ANY task status is not `completed`, your ONLY permitted next action is to call TaskList again.**
+**Completion check flow:**
+1. Wait for a fixer idle notification
+2. Call TaskList() to check current task statuses
+3. If ALL tasks show `completed`, proceed to collecting results
+4. If some tasks are still `in_progress`, wait for the next idle notification
 
-You MUST NOT do any of the following while any task is not `completed`:
+**You MUST NOT do any of the following while any task is not `completed`:**
 - Run verification commands
 - Send shutdown requests to any fixer
 - Proceed to Phase 7.5, Phase 7, or Phase 8
 - Present results to the user
 - Call TaskUpdate on any fixer task
 
-**Messages from fixers are NOT completion signals.** Fixers write their results to files and then call TaskUpdate to mark their task `completed`. The task status `completed` is the only exit condition for this loop.
+**Messages from fixers are NOT completion signals.** The task status `completed` (visible via TaskList) is the only exit condition.
 
-**Timeout handling:** If a specific task has been `in_progress` for 20+ consecutive polls with no change, send ONE follow-up message to that fixer, then continue polling. After 3 follow-up messages to the same fixer with no status change, declare that fixer failed and proceed without their results (note the gap in the report).
+**Timeout handling:** If a fixer has sent 3+ idle notifications without their task reaching `completed` status, send ONE follow-up message asking for status. If the fixer goes idle 3 more times after the follow-up without completing, declare that fixer failed and proceed without their results (note the gap in the report).
 
 **Collecting results:** Once ALL tasks show status `completed`, read each fixer's results file:
 

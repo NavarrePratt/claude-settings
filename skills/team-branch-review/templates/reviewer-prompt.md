@@ -128,3 +128,5 @@ For each finding:
 
 ## Notable Observations
 [Broader observations about patterns, quality, or concerns in your focus area]
+
+After writing the findings file, your work is complete. Do not wait for further instructions, attempt additional analysis, or offer to help with other tasks.
