@@ -100,7 +100,7 @@ Before creating issues, confirm:
 - [ ] All discovered edge cases addressed or explicitly deferred with rationale
 - [ ] Error paths defined (what happens when X fails?)
 - [ ] Testing strategy covers new code
-- [ ] Trade-offs documented with reasoning
+- [ ] Design decisions documented with reasoning (feeds into epic and PR description)
 
 ### Create Beads
 
@@ -123,9 +123,9 @@ Created X bead(s) from AI debate planning (opus + codex):
 
 Epic: bd-xxx - [epic title]
 
-Key trade-offs from debate:
-- [Trade-off 1] - Chose X because Y
-- [Trade-off 2] - Deferred Z for future optimization
+Design decisions from debate:
+- [Decision 1] - Chose X over Y because Z
+- [Decision 2] - Deferred Z for future optimization
 
 Ready for implementation.
 ```

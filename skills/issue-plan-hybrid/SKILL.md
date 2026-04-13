@@ -246,8 +246,8 @@ Codex review addressed:
 - [Gap 1] - [how resolved]
 - [Gap 2] - [how resolved]
 
-Trade-offs documented:
-- [Trade-off 1] - User chose X over Codex suggestion Y because Z
+Design decisions documented:
+- [Decision 1] - User chose X over Codex suggestion Y because Z
 
 Ready for implementation.
 ```

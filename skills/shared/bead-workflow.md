@@ -121,8 +121,11 @@ br create "[feature/task name]" --type epic --priority <N> --description "$(cat 
 - Tests: `[discovered test command]`
 - E2E: `[discovered e2e command]`
 
-# Key Trade-offs
-[Document major trade-offs from planning]
+# Design Decisions
+[Document key design decisions and tradeoffs from planning. For each decision:
+what was chosen, what alternatives were considered, and why this approach won.
+Focus on choices where a reasonable person might have decided differently.
+This section feeds directly into the PR description - write it for reviewers.]
 
 # Success Criteria
 All implementation issues closed and E2E verification passes.

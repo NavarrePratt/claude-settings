@@ -113,7 +113,9 @@ After the interview is complete, synthesize everything discussed into a comprehe
 1. **Summary** - What we are building and why
 2. **Scope** - What is included and excluded
 3. **Technical approach** - How it will be implemented
-4. **Key decisions** - Important choices made during the interview
+4. **Design decisions** - Key choices made during the interview: what was chosen,
+   alternatives considered, and reasoning. These feed directly into the epic's
+   "Design Decisions" section and ultimately the PR description.
 5. **Edge cases addressed** - How we handle unusual situations
 6. **Testing strategy** - How we verify correctness
 7. **Risks and mitigations** - What could go wrong and how we prevent it
@@ -142,9 +144,9 @@ Created X bead(s) from user interview:
 
 Epic: bd-xxx - [epic title]
 
-Key decisions from interview:
-- [Decision 1]
-- [Decision 2]
+Design decisions from interview:
+- [Decision 1] - Chose X over Y because Z
+- [Decision 2] - Chose A because B (feeds into epic "Design Decisions" section)
 
 Ready for implementation.
 ```
