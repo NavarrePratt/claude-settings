@@ -44,7 +44,7 @@ PRIOR_SUMMARIES
    create beads yourself - the lead agent handles that.
 
 7. **Write your summary**: When done, write a summary file to:
-   `/tmp/implement-TEAM_NAME/BEAD_ID-summary.md`
+   `/tmp/implement-BRANCH_NAME/BEAD_ID-summary.md`
 
 ## Summary Format
 

@@ -58,7 +58,7 @@ The lead agent implements directly:
 
 #### Subagent Mode (large epics)
 
-Spawn a foreground agent per bead:
+Spawn a foreground agent per bead with a 10-minute timeout:
 
 ```
 Agent(
@@ -67,6 +67,9 @@ Agent(
   mode: "bypassPermissions"
 )
 ```
+
+If the agent has not completed after 10 minutes of wall time, treat it as a
+timeout: reset the bead to open status and record as skipped.
 
 Template variables to substitute in templates/bead-prompt.md:
 - `BEAD_ID` - the bead identifier
@@ -79,7 +82,7 @@ Template variables to substitute in templates/bead-prompt.md:
 
 After the agent completes, read its summary file:
 ```
-/tmp/implement-<team-name>/<BEAD_ID>-summary.md
+/tmp/implement-<BRANCH_NAME>/<BEAD_ID>-summary.md
 ```
 
 Accumulate summaries for PRIOR_SUMMARIES in subsequent bead prompts.
@@ -126,7 +129,7 @@ they have explicit blocks dependencies on later beads.
 
 When using subagents, the lead maintains continuity through summary files:
 
-1. Each subagent writes a summary to /tmp/implement-<team>/<BEAD_ID>-summary.md
+1. Each subagent writes a summary to /tmp/implement-<BRANCH_NAME>/<BEAD_ID>-summary.md
 2. Summary format:
    - Files created or modified (paths only)
    - What the bead accomplished (one paragraph)

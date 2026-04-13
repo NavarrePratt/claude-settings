@@ -63,9 +63,11 @@ Skip the entire review pipeline and proceed to the next phase.
 
 ## Invoke Review
 
-Use natural language skill composition to run the review:
+Invoke the review skill using the Skill tool:
 
-> "Run /team-branch-review to review all commits on this branch."
+```
+Skill(skill: "team-branch-review")
+```
 
 The review skill detects branch and base commit automatically via its Context
 section. It spawns reviewer agents, validates findings with Codex, and produces
@@ -102,7 +104,9 @@ Confirmed Critical or High findings remain.
 
 Action: invoke the fix pipeline:
 
-> "Run /team-branch-fix with the review report above."
+```
+Skill(skill: "team-branch-fix", args: "<paste the review report>")
+```
 
 The fix skill handles:
 - User interview (which findings to fix via AskUserQuestion)
@@ -135,8 +139,9 @@ questions: [{
 
 **If "Fix confirmed findings"**:
 
-> "Run /team-branch-fix with the review report above. Focus on confirmed
-> (non-disputed) findings only."
+```
+Skill(skill: "team-branch-fix", args: "<paste the review report, noting disputed findings should be skipped>")
+```
 
 After fix completes, proceed to Post-Fix Cleanup. Record disputed findings
 as unresolved in the review outcome.

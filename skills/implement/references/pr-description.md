@@ -57,14 +57,18 @@ Surface the key tradeoffs and decisions so reviewers can critique the reasoning
 before diving into code. Agent-based reviewers benefit from having tradeoff
 context upfront instead of rediscovering it from the diff.
 
-1. Review the implementation context from Phases 1-4: what approaches were
-   considered, what was chosen, and why
-2. Identify decisions where a reasonable person might have chosen differently
-3. Write each decision as a short paragraph: the choice made, alternatives
+1. Read the epic description from Phase 0 context - the "Design Decisions"
+   section is the primary source, capturing tradeoffs from the planning phase
+2. Supplement with bead descriptions, which explain why each piece of work
+   exists and any per-bead approach decisions
+3. Add any implementation-phase decisions that arose during Phases 2-4
+   (these are supplementary - the planning-phase decisions carry more weight)
+4. Identify decisions where a reasonable person might have chosen differently
+5. Write each decision as a short paragraph: the choice made, alternatives
    considered (if any), and the reasoning
-4. Focus on architectural choices, API design, error handling strategy,
+6. Focus on architectural choices, API design, error handling strategy,
    performance tradeoffs - not mechanical details
-5. Do NOT list files changed or restate what the diff shows
+7. Do NOT list files changed or restate what the diff shows
 
 Example:
 ```markdown
@@ -112,7 +116,7 @@ Reviewed by multi-agent team: N findings identified, M fixed, K deferred.
 
 **If review was skipped** (no commits, --skip-review, or user choice):
 ```
-Review skipped: [reason - e.g., "no commits on branch" or "user opted out"].
+Review skipped: [reason - e.g., "no commits on branch" or "user opted out"]
 ```
 
 **If review was MANUAL REVIEW REQUIRED and user skipped fixes**:
@@ -155,7 +159,7 @@ Example output:
 
 ## Output
 
-Save the rendered template to `.claude/pr-descriptions/{branch-name}.md`
+Save the rendered template to `.claude/pr-descriptions/feat-<BRANCH_NAME>.md`
 in the worktree. Create the directory if it does not exist.
 
 Present the full rendered description to the user in the conversation for

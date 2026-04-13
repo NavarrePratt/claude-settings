@@ -92,14 +92,21 @@ Record the epic title from the JSON output as **EPIC_TITLE**.
 
 **Check 5: Epic has children**
 
+Check whether any bead lists this epic as its parent using the parent-field
+scan (same approach as Phase 1 Step 1, but only checking for existence):
+
 ```bash
-br dep tree --json <EPIC_ID>
+br list --json --limit 0
 ```
 
-Parse the returned array. The epic itself appears at depth 0. Descendants
-appear at depth 1+.
+Extract all IDs, then batch-fetch parent fields:
 
-If the array length is 1 (only the epic, no children):
+```bash
+br show <id1> <id2> ... --json
+```
+
+Scan the results for any bead whose `parent` field matches EPIC_ID. If none
+found:
 > "Epic `<EPIC_ID>` (`<EPIC_TITLE>`) has no child beads. Add beads to the epic first:
 > ```
 > br create \"Task title\" --status deferred --description \"...\" --json
@@ -226,11 +233,11 @@ Display to the user:
 ```
 Execution Plan for Epic: <EPIC_TITLE> (<EPIC_ID>)
 
-Wave 1 (depth 1):
+Wave 1:
   bd-xxx: Title (P2)
   bd-yyy: Title (P1)
 
-Wave 2 (depth 2):
+Wave 2:
   bd-zzz: Title (P2)
 
 Already completed: bd-aaa, bd-bbb
@@ -411,9 +418,9 @@ Execute the per-bead cycle from bead-implementation.md:
    - Replace `VERIFICATION_COMMANDS` with extracted verification commands
    - Replace `PRIOR_SUMMARIES` with concatenated summaries from prior beads
      (or "No prior beads implemented yet." for the first bead)
-   - Replace `TEAM_NAME` with BRANCH_NAME
+   - Replace `BRANCH_NAME` with the branch name
 
-   Spawn the agent:
+   Spawn the agent with a 10-minute timeout expectation:
    ```
    Agent(
      description: "Implement <bead_id>",
@@ -421,6 +428,9 @@ Execute the per-bead cycle from bead-implementation.md:
      mode: "bypassPermissions"
    )
    ```
+
+   If the agent has not completed after 10 minutes, treat as a timeout:
+   reset the bead to open status and record as skipped.
 
    After agent completes, read the summary file:
    `/tmp/implement-<BRANCH_NAME>/<bead_id>-summary.md`
@@ -765,6 +775,7 @@ Report:
 | Review aborted by user | Stop pipeline, leave branch as-is |
 | PR description directory not writable | Warn, print description to conversation only |
 | git diff/log fails in worktree | Use available context, note incomplete stats in description |
+| /commit skill fails (pre-commit hooks, staging) | Report the failure, let user resolve manually |
 | gh pr create fails | Report error, provide manual PR creation command |
 | git push fails | Report error, suggest user push manually |
 | User edits PR description iteratively | Re-save to file after each edit |
@@ -783,11 +794,11 @@ Report:
 - **No counts in commits**: counts go stale before the commit is pushed
 - **Worktree isolation**: all work happens in .claude/worktrees/implement-*
 - **One review cycle**: never re-run /team-branch-review after /team-branch-fix
-- **Natural language composition**: invoke /team-branch-review and /team-branch-fix via natural language, not Skill() tool calls
+- **Skill invocation**: invoke /team-branch-review and /team-branch-fix via the Skill() tool, not natural language text
 - **Review is post-implementation**: review runs after all beads are implemented, not per-bead
 - **Clean state before review**: all changes must be committed before review starts
 - **PR description from epic**: the summary comes from the epic description, not from bead titles
-- **Group changes by area**: PR change lists group by functional area, not by bead or commit
+- **Design decisions from epic**: PR design decisions derive from the epic description, not from implementation details
 - **No bead IDs in PR description summary/changes**: bead table is the only place bead IDs appear
 - **Push requires approval**: never push to remote without explicit user confirmation
 - **PR creation requires approval**: never create a PR without explicit user confirmation

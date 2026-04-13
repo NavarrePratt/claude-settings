@@ -5,7 +5,7 @@ Resolve an epic ID into an ordered execution plan of implementable beads.
 ## Inputs
 
 - `epic_id`: The epic bead ID (e.g., `bd-xxx`)
-- Dependency tree from `br dep tree`
+- All beads from `br list` + `br show` (batch) with parent fields
 - Ready set from `br ready`
 
 ## Algorithm
@@ -98,21 +98,7 @@ Algorithm:
 If no blocks dependencies exist (all beads are independent), put everything
 in Wave 1 sorted by priority.
 
-### Step 6: Group into Waves
-
-Partition the sorted list into waves by depth:
-
-```
-waves = {}
-for bead in executable:
-    waves.setdefault(bead.depth, []).append(bead)
-```
-
-- Wave 1: all beads at depth 1
-- Wave 2: all beads at depth 2
-- etc.
-
-### Step 7: Handle Edge Cases
+### Step 6: Handle Edge Cases
 
 **No ready beads (all blocked)**:
 Report blocked beads and their blocking dependencies. For each blocked bead,
@@ -140,18 +126,18 @@ If any bead has status=in_progress, warn:
 Skipping to avoid duplicate work. If this is stale, reset it with
 `br update bd-xxx --status open`."
 
-### Step 8: Present Execution Plan
+### Step 7: Present Execution Plan
 
 Display the plan to the user via assistant text:
 
 ```
 Execution Plan for Epic: <epic title> (<epic_id>)
 
-Wave 1 (depth 1):
+Wave 1:
   bd-xxx: Title (P2)
   bd-yyy: Title (P1)
 
-Wave 2 (depth 2):
+Wave 2:
   bd-zzz: Title (P2)
 
 Already completed: bd-aaa, bd-bbb
@@ -162,7 +148,7 @@ Total: N beads to implement across M waves.
 Proceed?
 ```
 
-### Step 9: Wait for User Confirmation
+### Step 8: Wait for User Confirmation
 
 Use AskUserQuestion to get explicit confirmation before proceeding to
 implementation phases:
