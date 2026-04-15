@@ -25,7 +25,7 @@ If "worktree":
 Parse `$ARGUMENTS` to extract the epic ID (first whitespace-delimited token).
 
 If empty or not a bead ID:
-> "Usage: `/implement <epic-id> [branch-name]`"
+> "Usage: `/implement <epic-id> [branch-name] [--auto]`"
 
 Record as **EPIC_ID**.
 
@@ -48,10 +48,18 @@ br dep cycles
 
 If cycles exist, report them and stop.
 
-## Check 6: Parse optional branch name
+## Check 6: Parse optional arguments
 
-Parse the second whitespace-delimited token from `$ARGUMENTS`. Record as
-**BRANCH_NAME** (or null if not provided).
+Parse remaining tokens from `$ARGUMENTS` (after the epic ID):
+- `--auto` flag: if present anywhere after the epic ID, set **AUTO_MODE** = true;
+  otherwise **AUTO_MODE** = false. Controls whether Phase 4 passes `--auto` to
+  /team-branch-fix (autonomous fix selection) or invokes it interactively.
+- Remaining positional token (not `--auto`): optional branch name.
+
+The `--auto` flag can appear in any position after the epic ID. Strip it
+before extracting the branch name.
+
+Record **AUTO_MODE** (true/false) and **BRANCH_NAME** (or null if not provided).
 
 ## Check 7: Discover BASE_REF
 

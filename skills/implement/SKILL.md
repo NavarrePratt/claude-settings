@@ -4,7 +4,7 @@ description: >
   Implement an epic's beads in a worktree with logical commits, multi-agent
   review, fix pipeline, and PR description generation. Replaces the manual
   atari-start -> review -> fix -> clean-copy -> PR workflow.
-argument-hint: "<epic-id> [branch-name]"
+argument-hint: "<epic-id> [branch-name] [--auto]"
 ---
 
 # Implement Epic
@@ -50,7 +50,7 @@ Run all checks from the reference file in order, stopping at first failure:
 3. Epic ID provided (parse from `$ARGUMENTS`)
 4. Epic exists (record **EPIC_ID** and **EPIC_TITLE**)
 5. No dependency cycles
-6. Parse optional branch name from `$ARGUMENTS`
+6. Parse optional branch name and `--auto` flag from `$ARGUMENTS`
 7. Discover **BASE_REF** (default branch detection)
 
 Note: the "epic has children" check is deferred to Phase 1. The epic-resolution
@@ -130,6 +130,7 @@ worktree-setup.md Step 1).
   "base_ref": "<BASE_REF>",
   "worktree_path": "<WORKTREE_PATH>",
   "repo_name": "<REPO_NAME>",
+  "auto_mode": false,
   "last_completed_phase": "phase-2",
   "execution_plan": { "waves": [...] },
   "bead_statuses": { "<bead_id>": { "status": "pending" } },
@@ -210,10 +211,16 @@ Record the outcome label from the review report. Parse findings to compute
 the actionable finding count per review-fix-pipeline.md.
 
 - **No actionable findings**: skip fix pipeline
-- **Actionable findings exist**: run fix pipeline with `--auto` flag
+- **Actionable findings exist**: run fix pipeline. If **AUTO_MODE** is true,
+  pass `--auto` for autonomous fix selection. If false, invoke without
+  `--auto` so the user can interactively approve each finding.
 
 ```
+# AUTO_MODE=true:
 Skill(skill: "team-branch-fix", args: "--auto <review report>")
+
+# AUTO_MODE=false:
+Skill(skill: "team-branch-fix", args: "<review report>")
 ```
 
 **Step 4: Post-Fix Cleanup**
@@ -347,7 +354,7 @@ worktree preservation path.
 - **No counts in commits**: counts go stale before the commit is pushed
 - **Worktree isolation**: all work happens in .claude/worktrees/implement-*
 - **Review default**: one full review + one fix pass, targeted re-review only for non-trivial fixes
-- **Auto-mode for fixes**: /team-branch-fix always invoked with --auto
+- **Auto-mode for fixes**: /team-branch-fix receives --auto only when /implement is invoked with --auto
 - **Skill invocation**: invoke review/fix via the Skill() tool
 - **Review is post-implementation**: review runs after all beads, not per-bead
 - **Clean state before review**: all changes must be committed before review
