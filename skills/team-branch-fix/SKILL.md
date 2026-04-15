@@ -76,6 +76,23 @@ Create temp directory for fixer results:
 mkdir -p /tmp/fix-TEAM_NAME
 ```
 
+### Phase 0.5: Parse Auto Mode
+
+Parse the `--auto` flag from ARGUMENTS before any other processing.
+
+**Parsing rule:** If ARGUMENTS starts with `--auto` (first whitespace-delimited token), set `AUTO_MODE = true` and strip `--auto` from the arguments before passing the remainder to Phase 1. If `--auto` appears anywhere other than the first token, ignore it (treat as part of the review report text). If ARGUMENTS does not start with `--auto`, set `AUTO_MODE = false`.
+
+When `AUTO_MODE` is true, all AskUserQuestion calls in subsequent phases are replaced with deterministic defaults. Each auto-decision is logged to an **Auto-Mode Decision Log** table (columns: Phase, Finding, Decision, Reason) that is printed in full before execution begins (Phase 2 Step 4).
+
+AUTO_MODE does not affect:
+- Phase 0 precondition checks (these are not interactive)
+- Phase 1 report parsing (no user interaction)
+- Phase 1.5 canonicalization (no user interaction)
+- Phase 3 fix plan construction (derived from auto-decisions)
+- Phase 4, 5, 6, 7, 8 (no user interaction in these phases)
+
+---
+
 ### Phase 1: Gather Review Report
 
 Obtain the review report from one of these sources (check in order):
@@ -162,6 +179,8 @@ Before processing findings, analyze the review report and branch context to infe
 
 Display the inference and reason to the user in assistant text, then offer a one-click override:
 
+**Auto-mode (AUTO_MODE = true):** Use the inferred default directly without asking. Log to Auto-Mode Decision Log: Phase="Step 0", Finding="-", Decision="Keep [style]", Reason="auto-mode: used inferred default". Skip the AskUserQuestion call below.
+
 ```
 Call AskUserQuestion tool with:
   questions: [{
@@ -192,6 +211,8 @@ For each confirmed Critical or High finding:
 
 2. **If trivial** (score < 2): Use the standard flow - call AskUserQuestion:
 
+   **Auto-mode (AUTO_MODE = true):** Auto-select "Fix (Recommended)". Log to Auto-Mode Decision Log: Phase="Step 1", Finding="[finding_id]: [title]", Decision="Fix", Reason="auto-mode: trivial confirmed finding". Skip the AskUserQuestion call below.
+
 ```
 Call AskUserQuestion tool with:
   questions: [{
@@ -208,6 +229,8 @@ Call AskUserQuestion tool with:
 ```
 
 3. **If complex** (score >= 2): Generate 2 concrete approaches per [approach generation](references/approach-generation.md). Present via AskUserQuestion with markdown previews (~10 lines each). Include "Validate with Codex" option per [codex validation](references/codex-validation.md). Store chosen approach in [decision schema](references/decision-schema.md). Limit to 2 approaches so options stay within AskUserQuestion's 4-option maximum (2 approaches + "Validate with Codex" + "Skip").
+
+   **Auto-mode (AUTO_MODE = true):** Still generate 2 approaches (read code, draft per approach-generation.md) since fixer agents need the approach context. Auto-select the first approach (session-default-aligned). Set `decision.approach_source = "default"`. Log to Auto-Mode Decision Log: Phase="Step 1", Finding="[finding_id]: [title]", Decision="Approach 1: [label]", Reason="auto-mode: complex finding, selected session-default-aligned approach". Skip the AskUserQuestion call.
 
    *(Fallback if reference files missing: draft 2 approaches from different styles - pick 2 of minimal_patch, defensive, refactor. Each needs a short label, one-line description, and ~10 line code preview. Session default goes first. Include "Validate with Codex" and "Skip" options. If user validates with Codex, call mcp__codex__codex with approaches + code context, then re-present with assessments baked in. Store decision.approach, decision.approach_detail, decision.approach_source.)*
 
@@ -243,6 +266,8 @@ Call AskUserQuestion tool with:
 
 For findings where Claude and Codex disagreed, resolve stance first, then handle complexity.
 
+**Auto-mode (AUTO_MODE = true):** Auto-select "Skip" for all disputed findings. Disputed findings mean reviewers disagree, and resolving that disagreement requires human judgment that cannot be safely automated. Log to Auto-Mode Decision Log: Phase="Step 2", Finding="[finding_id]: [title]", Decision="Skip", Reason="auto-mode: disputed finding, requires human judgment". Skip the AskUserQuestion call below and skip the complexity classification that follows.
+
 **Stance resolution**: Call AskUserQuestion to pick whose assessment to trust:
 
 ```
@@ -269,6 +294,8 @@ After stance is resolved, record `decision.stance` (`claude` or `codex`).
 - **If complex**: Generate 2 approaches within the chosen stance (approaches should align with the assessment the user trusted). Present via AskUserQuestion with markdown previews, same pattern as Step 1 complex flow.
 
 **Step 3: Medium & Low findings**
+
+**Auto-mode (AUTO_MODE = true):** Auto-select "Fix all (Recommended)" for every Med/Low category. The Phase 7 verification gate catches regressions from aggressive fixes. Log to Auto-Mode Decision Log: Phase="Step 3", Finding="[category] (N findings)", Decision="Fix all", Reason="auto-mode: batch approve Med/Low". Skip the AskUserQuestion call below.
 
 Batch these by category using AskUserQuestion:
 
@@ -303,6 +330,21 @@ Present the final fix plan to the user:
 - N findings deferred
 - Files that will be modified
 - For complex findings with chosen approaches: list the finding and chosen approach label
+
+**Auto-mode (AUTO_MODE = true):** Auto-select "Proceed (Recommended)". Before proceeding, print the complete Auto-Mode Decision Log table:
+
+```
+Auto-Mode Decision Log
+| Phase | Finding | Decision | Reason |
+|-------|---------|----------|--------|
+| Step 0 | - | Keep [style] | auto-mode: used inferred default |
+| Step 1 | f-1: [title] | Fix | auto-mode: trivial confirmed finding |
+| Step 2 | f-3: [title] | Skip | auto-mode: disputed finding, requires human judgment |
+| Step 3 | [category] (N) | Fix all | auto-mode: batch approve Med/Low |
+| ... | ... | ... | ... |
+```
+
+Log to Auto-Mode Decision Log: Phase="Step 4", Finding="-", Decision="Proceed", Reason="auto-mode: auto-confirmed fix plan". Skip the AskUserQuestion call below.
 
 Call AskUserQuestion to confirm before proceeding:
 ```
@@ -583,6 +625,8 @@ Compile a summary of all results:
 
 See [blocked-findings.md](references/blocked-findings.md) for the full resolution protocol, results file format, and follow-up fixer rules.
 
+**Auto-mode (AUTO_MODE = true):** Skip all blocked findings without spawning follow-up fixers. For each blocked finding, log to Auto-Mode Decision Log: Phase="7.5", Finding="[finding_id]: [title]", Decision="Skip", Reason="auto-mode: blocked finding, requires human judgment". Proceed directly to Phase 7.
+
 **Process summary:**
 
 1. Parse blocked findings from fixer results files (`## Blocked Findings` section)
@@ -675,11 +719,22 @@ Present the summary to the user:
 ### Codex Validation
 - All fixes validated: YES/NO
 - Issues found and corrected during validation: N
+
+### Auto-Mode Summary (only when AUTO_MODE = true)
+- Session default: [style]
+- Confirmed findings auto-approved: N
+- Disputed findings auto-skipped: N
+- Med/Low findings batch-approved: N
+- Blocked findings auto-skipped: N
+- Commit strategy: Fixup into original commits
+- Rebase result: Success | Failed (fell back to single commit)
 ```
 
 **Commit strategy with unresolved findings:** If unresolved blocked findings remain (follow-up also blocked), note them in the commit summary but still offer commit options for the fixes that did succeed. The commit should not be held up by findings the user will handle manually.
 
 **If verification passed**, call the AskUserQuestion tool for commit strategy:
+
+**Auto-mode (AUTO_MODE = true):** Auto-select "Fixup into original commits (Recommended)". Fixup produces cleaner history and is the existing recommended default. Log to Auto-Mode Decision Log: Phase="9", Finding="-", Decision="Fixup into original commits", Reason="auto-mode: recommended commit strategy". Skip the AskUserQuestion call below.
 
 ```
 Call AskUserQuestion tool with:
@@ -709,12 +764,13 @@ Task(
 
 Use Sonnet for the commit agent since this is mechanical work that doesn't need Opus.
 
-**Commit Agent Prompt** (substitute STRATEGY, FIXES_APPLIED, and BASE_COMMIT):
+**Commit Agent Prompt** (substitute STRATEGY, FIXES_APPLIED, BASE_COMMIT, and AUTO_MODE):
 
 ```
 You are committing code review fixes. The fixes are already applied and verified. Use the /commit skill for all commits.
 
 Strategy: STRATEGY
+Auto mode: AUTO_MODE
 
 Fixes applied:
 FIXES_APPLIED
@@ -729,7 +785,9 @@ For each fix, identify which commit on the branch introduced the code being fixe
 4. Create a fixup commit: `git commit --fixup=<target-commit-hash>`
 5. Repeat for each fix
 
-After all fixup commits are created, call AskUserQuestion to offer running the rebase:
+**If AUTO_MODE is true:** Run the rebase automatically without asking. Execute `GIT_SEQUENCE_EDITOR=true git rebase -i --autosquash BASE_COMMIT`. If the rebase fails (conflicts or other errors): run `git rebase --abort`, then fall back to a single fix commit containing all changes (stage everything and use /commit with a summary message). Report what happened.
+
+**If AUTO_MODE is false:** Call AskUserQuestion to offer running the rebase:
 
 ```
 Call AskUserQuestion tool with:
@@ -781,6 +839,9 @@ Report back what commits were created.
 | Follow-up fixer also blocked (max re-entry) | Report as unresolved, user handles manually |
 | Complexity classification timeout | Default to complex, proceed with approach generation |
 | Reference file missing | Use inline fallback instructions in the phase description |
+| --auto with no findings to fix | Report "No fixes to apply" and exit (same as non-auto) |
+| --auto rebase fails during fixup | Abort rebase, fall back to single fix commit |
+| --auto with all findings disputed | Skip all, report empty fix plan, exit cleanly |
 
 ## Guidelines
 
@@ -796,5 +857,9 @@ Report back what commits were created.
 - **Results come from files**: Fixers write results to `/tmp/fix-TEAM_NAME/`. Do not use message content as results.
 - **Bounded iteration**: Phase 7.5 allows at most 1 follow-up round. If a follow-up fixer also blocks, the finding becomes unresolved. No infinite loops.
 - **Verify after all fixes**: Phase 7 verification runs only after all fixers (original + follow-up) have completed.
+- **Auto-mode safety**: --auto skips disputed and blocked findings rather than guessing. Human judgment is required for disagreements.
+- **Auto-mode auditability**: Every auto-decision is logged to the Auto-Mode Decision Log table, printed in full before execution begins.
+- **Auto-mode parsing**: --auto must be the first token in ARGUMENTS. If it appears elsewhere, it is part of the report text.
+- **Auto-mode backward compatibility**: When --auto is absent, all behavior is identical to the non-auto flow. No code paths change.
 
 $ARGUMENTS
