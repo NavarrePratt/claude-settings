@@ -94,15 +94,26 @@ Verify clean state:
 git status --porcelain
 ```
 
-## Step 6: Determine Implementation Mode
+## Step 6: Create Artifact Directory and Determine Implementation Mode
 
-The lead agent decides between inline and subagent mode. See
-[bead-implementation.md](bead-implementation.md) for the decision criteria.
-
-For subagent mode, create the artifact directory using **REPO_NAME** (computed
-in Step 1). Use `mktemp -d` or verify directory ownership before writing to
-avoid symlink attacks on the predictable `/tmp` path:
+Create the artifact directory for state files, subagent summaries, and PR
+descriptions. Use **REPO_NAME** (computed in Step 1). Verify directory
+ownership before writing to avoid symlink attacks on the predictable `/tmp`
+path:
 
 ```bash
 mkdir -p /tmp/<REPO_NAME>-<EPIC_ID>
+chmod 700 /tmp/<REPO_NAME>-<EPIC_ID>
 ```
+
+After creation, verify the directory is owned by the current user and is not
+a symlink:
+
+```bash
+test -d /tmp/<REPO_NAME>-<EPIC_ID> && test -O /tmp/<REPO_NAME>-<EPIC_ID> && test ! -L /tmp/<REPO_NAME>-<EPIC_ID>
+```
+
+If verification fails, warn and fall back to a directory under the worktree.
+
+The lead agent decides between inline and subagent mode. See
+[bead-implementation.md](bead-implementation.md) for the decision criteria.
