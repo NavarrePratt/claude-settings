@@ -758,7 +758,7 @@ Report:
 | Fix skill fails mid-pipeline | Report partial results, proceed to Phase 5 |
 | Review aborted by user | Stop pipeline, leave branch as-is |
 | PR description directory not writable | Warn, print description to conversation only |
-| git diff/log fails in worktree | Use available context, note incomplete stats in description |
+| git diff/log fails in worktree | Use available context, note gaps in PR description |
 | /commit skill fails (pre-commit hooks, staging) | Report the failure, let user resolve manually |
 | gh pr create fails | Report error, provide manual PR creation command |
 | git push fails | Report error, suggest user push manually |
