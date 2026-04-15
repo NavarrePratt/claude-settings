@@ -1,7 +1,7 @@
 ---
 name: team-branch-fix
-description: Implement fixes for code review findings using a parallel agent team. Accepts a review report (from /team-branch-review or pasted), interviews the user on which findings to fix, then spawns agents to implement fixes in parallel with Codex validation.
-argument-hint: "[review report or path to report]"
+description: Implement fixes for code review findings using a parallel agent team. Accepts a review report (from /team-branch-review or pasted), interviews the user on which findings to fix (or runs autonomously with --auto), then spawns agents to implement fixes in parallel with Codex validation.
+argument-hint: "[--auto] [review report or path to report]"
 ---
 
 # Team Branch Fix
@@ -82,11 +82,11 @@ Parse the `--auto` flag from ARGUMENTS before any other processing.
 
 **Parsing rule:** If ARGUMENTS starts with `--auto` (first whitespace-delimited token), set `AUTO_MODE = true` and strip `--auto` from the arguments before passing the remainder to Phase 1. If `--auto` appears anywhere other than the first token, ignore it (treat as part of the review report text). If ARGUMENTS does not start with `--auto`, set `AUTO_MODE = false`.
 
-When `AUTO_MODE` is true, all AskUserQuestion calls in subsequent phases are replaced with deterministic defaults. Each auto-decision is logged to an **Auto-Mode Decision Log** table (columns: Phase, Finding, Decision, Reason) that is printed in full before execution begins (Phase 2 Step 4).
+When `AUTO_MODE` is true, all AskUserQuestion calls in subsequent phases are replaced with deterministic defaults. Each auto-decision is logged to an **Auto-Mode Decision Log** table (columns: Phase, Finding, Decision, Reason). The Phase 2 decisions are printed at Step 4 before fix agents are spawned. Later auto-decisions (Phases 7.5 and 9) are appended and the complete log is included in the Phase 9 Auto-Mode Summary.
 
 AUTO_MODE does not affect:
 - Phase 0 precondition checks (these are not interactive)
-- Phase 1 report parsing (no user interaction)
+- Phase 1 report parsing (report is provided via args when invoked with --auto; if no report is available in auto-mode, stop with an error rather than asking the user)
 - Phase 1.5 canonicalization (no user interaction)
 - Phase 3 fix plan construction (derived from auto-decisions)
 - Phase 4, 5, 6, 7, 8 (no user interaction in these phases)
@@ -726,8 +726,8 @@ Present the summary to the user:
 - Disputed findings auto-skipped: N
 - Med/Low findings batch-approved: N
 - Blocked findings auto-skipped: N
-- Commit strategy: Fixup into original commits
-- Rebase result: Success | Failed (fell back to single commit)
+- Commit strategy: [what was actually used - fixup or single commit fallback]
+- Rebase result: [Success | Failed (aborted, used single commit) | N/A]
 ```
 
 **Commit strategy with unresolved findings:** If unresolved blocked findings remain (follow-up also blocked), note them in the commit summary but still offer commit options for the fixes that did succeed. The commit should not be held up by findings the user will handle manually.
@@ -785,7 +785,7 @@ For each fix, identify which commit on the branch introduced the code being fixe
 4. Create a fixup commit: `git commit --fixup=<target-commit-hash>`
 5. Repeat for each fix
 
-**If AUTO_MODE is true:** Run the rebase automatically without asking. Execute `GIT_SEQUENCE_EDITOR=true git rebase -i --autosquash BASE_COMMIT`. If the rebase fails (conflicts or other errors): run `git rebase --abort`, then fall back to a single fix commit containing all changes (stage everything and use /commit with a summary message). Report what happened.
+**If AUTO_MODE is true:** Run the rebase automatically without asking. Execute `GIT_SEQUENCE_EDITOR=true git rebase -i --autosquash BASE_COMMIT`. If the rebase fails (conflicts or other errors): run `git rebase --abort`, then `git reset --soft BASE_COMMIT` to collapse all commits (including fixup commits) into staged changes, then use /commit to create a single fix commit with a summary message. Report what happened.
 
 **If AUTO_MODE is false:** Call AskUserQuestion to offer running the rebase:
 
