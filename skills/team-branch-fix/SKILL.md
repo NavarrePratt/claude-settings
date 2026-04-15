@@ -1,6 +1,6 @@
 ---
 name: team-branch-fix
-description: Implement fixes for code review findings using a parallel agent team. Accepts a review report (from /team-branch-review or pasted), interviews the user on which findings to fix (or runs autonomously with --auto), then spawns agents to implement fixes in parallel with Codex validation.
+description: Implement fixes for code review findings using a parallel agent team. Accepts a review report (from /team-branch-review, /team-commit-review, or pasted), interviews the user on which findings to fix (or runs autonomously with --auto), then spawns agents to implement fixes in parallel with Codex validation.
 argument-hint: "[--auto] [review report or path to report]"
 ---
 
@@ -97,7 +97,7 @@ AUTO_MODE does not affect:
 
 Obtain the review report from one of these sources (check in order):
 
-1. **Conversation context**: If a `/team-branch-review` report exists in the conversation above, use it directly
+1. **Conversation context**: If a `/team-branch-review` or `/team-commit-review` report exists in the conversation above, use it directly
 2. **$ARGUMENTS**: If arguments are provided, treat them as the report or a path to one
 3. **Ask the user**: If no report is available, ask the user to provide one
 
