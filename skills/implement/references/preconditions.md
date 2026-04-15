@@ -25,7 +25,7 @@ If "worktree":
 Parse `$ARGUMENTS` to extract the epic ID (first whitespace-delimited token).
 
 If empty or not a bead ID:
-> "Usage: `/implement <epic-id> [branch-name]`"
+> "Usage: `/implement <epic-id> [branch-name] [--auto]`"
 
 Record as **EPIC_ID**.
 

@@ -121,8 +121,13 @@ Proceed to Post-Fix Cleanup (skip fix pipeline).
 
 **If actionable_count == 0 and disputed_count > 0** (any outcome label - disputed-only):
 
-All findings are disputed - no automated fixes possible. Present disputed
-findings to the user:
+All findings are disputed - no automated fixes possible.
+
+**If AUTO_MODE is true**: auto-select "Skip" (matching the fix skill's convention
+for disputed findings in auto mode). Log the decision and proceed to Post-Fix
+Cleanup.
+
+**If AUTO_MODE is false**: present disputed findings to the user:
 
 Use AskUserQuestion:
 ```
@@ -173,8 +178,14 @@ The fix skill handles:
 If the outcome is MANUAL REVIEW REQUIRED with mixed findings (both actionable
 and disputed), present disputed findings to the user before invoking fixes:
 
+If AUTO_MODE is true:
 > "Review found disputed findings alongside actionable ones. Disputed findings
 > will be skipped by the fix pipeline. Actionable findings will be fixed."
+
+If AUTO_MODE is false:
+> "Review found disputed findings alongside actionable ones. Disputed findings
+> will be presented for your review in the fix pipeline. Actionable findings
+> will be fixed."
 
 After /team-branch-fix completes, proceed to Post-Fix Cleanup.
 

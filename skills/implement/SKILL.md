@@ -130,6 +130,7 @@ worktree-setup.md Step 1).
   "base_ref": "<BASE_REF>",
   "worktree_path": "<WORKTREE_PATH>",
   "repo_name": "<REPO_NAME>",
+  "auto_mode": false,
   "last_completed_phase": "phase-2",
   "execution_plan": { "waves": [...] },
   "bead_statuses": { "<bead_id>": { "status": "pending" } },
