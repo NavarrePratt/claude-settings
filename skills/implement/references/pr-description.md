@@ -12,11 +12,7 @@ conversation context.
 |-------|--------|-------|
 | Epic title and ID | br show output | Phase 0 |
 | Epic description | br show output | Phase 0 |
-| Implemented beads (IDs, titles, close reasons) | Wave tracking | Phase 3 |
-| Skipped beads (IDs, titles, skip reasons) | Wave tracking | Phase 3 |
 | Commit log | `git log --oneline main..HEAD` | Phase 5 |
-| Diff stats | `git diff --stat main..HEAD` | Phase 5 |
-| Lines changed | `git diff --shortstat main..HEAD` | Phase 5 |
 | Review outcome | Review outcome record | Phase 4 |
 | Verification results | Bead verification runs | Phase 3 |
 
@@ -29,10 +25,8 @@ placeholders:
 |-------------|---------|
 | CHANGES_SUMMARY | 2-3 sentences: what this PR accomplishes and why. Derived from the epic description, not a list of beads. |
 | DESIGN_DECISIONS | Key tradeoffs and decisions made during implementation, with reasoning. Entry point for reviewers. |
-| BEAD_TABLE | Markdown table of all beads with ID, title, and status (Closed or Skipped with reason). |
 | REVIEW_SUMMARY | One-line or short block summarizing the review outcome from Phase 4. |
 | VERIFICATION_RESULTS | List of verification commands run and their results (PASS/FAIL). |
-| DIFF_STATS | Output of `git diff --shortstat main..HEAD` - lines added/removed/files changed. |
 
 ## Generating the Summary (CHANGES_SUMMARY)
 
@@ -83,49 +77,39 @@ either can evolve independently, at the cost of slightly less control over
 reviewer configuration.
 ```
 
-## Generating the Bead Table (BEAD_TABLE)
-
-Create a markdown table with all beads from the execution plan.
-
-```markdown
-| Bead | Title | Status |
-|------|-------|--------|
-| bd-xxx | First task title | Closed |
-| bd-yyy | Second task title | Closed |
-| bd-zzz | Third task title | Skipped: verification failed |
-```
-
-- Use the bead ID and title from the execution plan
-- Status is "Closed" for successfully implemented beads
-- Status is "Skipped: <reason>" for beads that were skipped in Phase 3
-- Include already-closed beads from the resume case with "Previously closed"
-
 ## Generating the Review Summary (REVIEW_SUMMARY)
 
 Derive from the review outcome record compiled in Phase 4.
 
-**If review was APPROVED**:
+Select the case that matches the Phase 4 review outcome record. The record
+has three fields: outcome label, fixes status, and remaining issues. Map
+directly from those fields - do not require information the record does not
+capture.
+
+**If no findings** (fixes: "none needed"):
 ```
-Reviewed by multi-agent team: APPROVED, no critical or high issues found.
+Reviewed by multi-agent team: no actionable findings.
 ```
 
-**If review found issues and fixes were applied**:
+**If findings fixed** (fixes: "applied"):
 ```
-Reviewed by multi-agent team: N findings identified, M fixed, K deferred.
-```
-
-**If review was skipped** (no commits, --skip-review, or user choice):
-```
-Review skipped: [reason - e.g., "no commits on branch" or "user opted out"]
+Reviewed by multi-agent team: findings identified and fixed.
 ```
 
-**If review was MANUAL REVIEW REQUIRED and user skipped fixes**:
+**If findings remain for manual review** (fixes: "partially applied" or "skipped", or remaining is non-empty):
 ```
-Review flagged disputed findings. User opted to skip automated fixes.
-N unresolved findings noted for manual review.
+Reviewed by multi-agent team: findings identified. Some remain for manual review.
 ```
 
-Include counts of fixed/skipped/deferred/unresolved only when non-zero.
+**If review was skipped** (no commits, or user opted out):
+```
+Review skipped: [reason].
+```
+
+Do not include numeric counts of findings, fixes, or deferrals. The review
+report contains the details; the PR summary should be qualitative. The agent
+may add brief context from the conversation (e.g., "disputed findings
+deferred") but the template should not require it.
 
 ## Generating Verification Results (VERIFICATION_RESULTS)
 
@@ -144,19 +128,6 @@ descriptions), write:
 No explicit verification commands defined in bead descriptions.
 ```
 
-## Generating Diff Stats (DIFF_STATS)
-
-Run and include the output of:
-
-```bash
-git diff --shortstat main..HEAD
-```
-
-Example output:
-```
-15 files changed, 487 insertions(+), 23 deletions(-)
-```
-
 ## Output
 
 Save the rendered template to `.claude/pr-descriptions/feat-<BRANCH_NAME>.md`
@@ -164,4 +135,4 @@ in the worktree. Create the directory if it does not exist.
 
 Present the full rendered description to the user in the conversation for
 review. Allow iterative edits via conversation ("change the summary to...",
-"remove the bead table", etc.) and re-save after each edit.
+"add a note about X", etc.) and re-save after each edit.

@@ -6,10 +6,6 @@ CHANGES_SUMMARY
 
 DESIGN_DECISIONS
 
-## Implementation Details
-
-BEAD_TABLE
-
 ## Review
 
 REVIEW_SUMMARY
@@ -17,7 +13,3 @@ REVIEW_SUMMARY
 ## Testing
 
 VERIFICATION_RESULTS
-
----
-
-DIFF_STATS

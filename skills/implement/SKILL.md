@@ -528,42 +528,46 @@ Run /team-branch-review to review all commits on this branch.
 The review skill detects branch and base commit automatically. It spawns
 reviewer agents, validates findings with Codex, and produces a report.
 
-**Step 3: Parse Outcome and Act**
+**Step 3: Compute Actionable Findings and Act**
 
-Read the review report from the conversation. The outcome line is:
+Read the review report from the conversation. Record the outcome label:
 
 ```
 ## Outcome: [APPROVED | NEEDS REVISION | MANUAL REVIEW REQUIRED]
 ```
 
-**If APPROVED**: proceed to Phase 5 with note "Review: APPROVED, no issues
-found."
+The outcome label is recorded for the PR description but does NOT gate fix
+execution. Instead, parse the findings table and compute the actionable
+finding count:
 
-**If NEEDS REVISION**: run /team-branch-fix with --auto and the review report.
-The --auto flag makes the fix pipeline fully autonomous: confirmed findings are
-auto-approved, disputed findings are auto-skipped, and fixup commit strategy is
-used. Push and PR gates remain human-gated in Phase 6. After fix completes,
-proceed to Step 4.
+- **Actionable**: Confirmed + Severity-adjusted + non-disputed Codex-only
+- **Not actionable**: Disputed (reviewer disagreement requires human judgment)
 
-**If MANUAL REVIEW REQUIRED**: present disputed findings to the user via
-AskUserQuestion with three options:
+**If no actionable findings**: skip the fix pipeline. For disputed-only cases
+(MANUAL REVIEW REQUIRED), present disputed findings to user and offer
+"Skip" or "Abort".
 
-- "Fix confirmed findings" - run /team-branch-fix with --auto for non-disputed findings
-- "Skip review fixes" - proceed to Phase 5 with unresolved findings noted
-- "Abort" - stop the implement pipeline, leave branch as-is
+**If actionable findings exist** (any outcome label): run /team-branch-fix
+with `--auto` flag and the review report. The `--auto` flag auto-selects
+actionable findings and skips disputed ones, keeping /implement autonomous.
 
-See review-fix-pipeline.md for full AskUserQuestion templates and handling
-for each option.
+After fix completes, proceed to Step 4.
+
+See review-fix-pipeline.md for the full actionable finding definition,
+branching logic, and AskUserQuestion templates.
 
 **Step 4: Post-Fix Cleanup**
 
 After the fix pass completes:
 
 1. Verify clean git state: `git status --porcelain`
-2. If uncommitted changes remain, run /commit
+2. If uncommitted changes remain and the fix pass reported success,
+   run /commit. If the fix pass reported verification failures, do NOT
+   auto-commit - surface the dirty state to the user via AskUserQuestion
+   and let them decide whether to commit, revert, or fix manually.
 3. Record review outcome for Phase 5 PR description:
-   - Total findings
-   - Fixed, skipped, deferred, unresolved counts
+   - Outcome label (APPROVED, NEEDS REVISION, MANUAL REVIEW REQUIRED)
+   - Whether fixes were applied, deferred, or skipped
    - Any critical findings that remain
 
 **Bounded Iteration Rule**
@@ -596,16 +600,12 @@ available from prior phases:
 
 1. Epic context: **EPIC_ID** and **EPIC_TITLE** from Phase 0
 2. Epic description: from `br show <EPIC_ID> --json` (Phase 0)
-3. Implemented beads: IDs, titles, and close reasons (tracked during Phase 3)
-4. Skipped beads: IDs, titles, and skip reasons (tracked during Phase 3)
-5. Review outcome record from Phase 4 (or "review skipped" if Phase 4 was skipped)
+3. Review outcome record from Phase 4 (or "review skipped" if Phase 4 was skipped)
 
-Run these commands to gather remaining inputs:
+Run this command to gather the commit log:
 
 ```bash
 git log --oneline main..HEAD
-git diff --stat main..HEAD
-git diff --shortstat main..HEAD
 ```
 
 **Step 2: Generate Description**
@@ -622,29 +622,14 @@ using the algorithm documented in references/pr-description.md:
   reviewers. Do not list files changed or restate the diff. See
   `references/pr-description.md` for the full algorithm.
 
-- **BEAD_TABLE**: markdown table of all beads from the execution plan:
-
-  ```markdown
-  | Bead | Title | Status |
-  |------|-------|--------|
-  | bd-xxx | Title | Closed |
-  | bd-yyy | Title | Skipped: reason |
-  ```
-
-  Include already-closed beads (resume case) as "Previously closed".
-
-- **REVIEW_SUMMARY**: derive from the Phase 4 review outcome record:
-  - APPROVED: "Reviewed by multi-agent team: APPROVED, no critical or high issues found."
-  - Fixed findings: "Reviewed by multi-agent team: N findings identified, M fixed, K deferred."
-  - Review skipped: "Review skipped: [reason]."
-  - Manual review required (user skipped): "Review flagged disputed findings. User opted to skip automated fixes. N unresolved findings noted for manual review."
+- **REVIEW_SUMMARY**: derive from the Phase 4 review outcome record.
+  Use qualitative descriptions, not numeric counts. See
+  `references/pr-description.md` for the full set of cases.
 
 - **VERIFICATION_RESULTS**: list of verification commands run during Phase 3
   with PASS/FAIL results. If no verification commands were defined in bead
   descriptions, write "No explicit verification commands defined in bead
   descriptions."
-
-- **DIFF_STATS**: output of `git diff --shortstat main..HEAD`.
 
 **Step 3: Save and Present**
 
@@ -677,8 +662,8 @@ Epic: <EPIC_TITLE> (<EPIC_ID>)
 Branch: feat/<BRANCH_NAME>
 Worktree: <WORKTREE_PATH>
 
-Beads: N implemented, M skipped out of K total
-Commits: <git rev-list --count main..HEAD> commits (<git diff --shortstat main..HEAD>)
+Beads: implemented and closed (list skipped beads if any)
+Commits: <git log --oneline main..HEAD>
 Review: <review outcome summary>
 PR description: .claude/pr-descriptions/feat-<BRANCH_NAME>.md
 ```
@@ -776,7 +761,7 @@ Report:
 | Fix skill fails mid-pipeline | Report partial results, proceed to Phase 5 |
 | Review aborted by user | Stop pipeline, leave branch as-is |
 | PR description directory not writable | Warn, print description to conversation only |
-| git diff/log fails in worktree | Use available context, note incomplete stats in description |
+| git diff/log fails in worktree | Use available context, note gaps in PR description |
 | /commit skill fails (pre-commit hooks, staging) | Report the failure, let user resolve manually |
 | gh pr create fails | Report error, provide manual PR creation command |
 | git push fails | Report error, suggest user push manually |
@@ -802,7 +787,8 @@ Report:
 - **Clean state before review**: all changes must be committed before review starts
 - **PR description from epic**: the summary comes from the epic description, not from bead titles
 - **Design decisions from epic**: PR design decisions derive from the epic description, not from implementation details
-- **No bead IDs in PR description summary/changes**: bead table is the only place bead IDs appear
+- **No bead details in PR descriptions**: PR descriptions must not mention bead IDs, skip reasons, or resume-state bookkeeping. If omitted work changes scope, describe in product or system terms only
+- **No numeric stats in PR descriptions**: do not include file counts, line counts, finding counts, or diff stats. The diff shows what changed. Counts go stale
 - **Push requires approval**: never push to remote without explicit user confirmation
 - **PR creation requires approval**: never create a PR without explicit user confirmation
 - **Iterative PR editing**: allow user to refine the PR description via conversation before saving
