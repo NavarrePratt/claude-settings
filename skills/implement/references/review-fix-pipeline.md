@@ -52,12 +52,12 @@ If "Abort": stop the pipeline, return to user.
 ### Check 2: Commits Exist on Branch
 
 ```bash
-git log --oneline main..HEAD
+git log --oneline <BASE_REF>..HEAD
 ```
 
-If output is empty, the branch has no commits vs main. Nothing to review:
+If output is empty, the branch has no commits vs BASE_REF. Nothing to review:
 
-> "No commits on this branch vs main. Skipping review."
+> "No commits on this branch vs BASE_REF. Skipping review."
 
 Skip the entire review pipeline and proceed to the next phase.
 
@@ -219,7 +219,41 @@ questions: [{
 }]
 ```
 
-### Step 2: Record Review Outcome
+### Step 2: Re-Run Verification Commands
+
+If the fix pass made code changes (fix commits exist, uncommitted changes
+were committed in Step 1, or uncommitted fix changes remain in the working
+tree), re-run the verification commands from Phase 3 (the union of all bead
+verification commands).
+
+**Note**: if the user chose "Leave for manual review" in Step 1, uncommitted
+changes are present but not committed. Still re-run verification - the
+results inform the PR description regardless of commit state.
+
+```bash
+# Run each verification command from Phase 3
+# e.g., mise run lint, mise run test, mise run build
+```
+
+**If all pass**: proceed to Step 3.
+
+**If any fail**: surface failures to the user via AskUserQuestion:
+
+```
+questions: [{
+  question: "Post-fix verification failed. Some checks do not pass after fix changes. How to proceed?",
+  header: "Verification failure",
+  options: [
+    { label: "Proceed anyway", description: "Continue to PR description - note failures for reviewers" },
+    { label: "Abort", description: "Stop pipeline, leave branch for manual investigation" }
+  ],
+  multiSelect: false
+}]
+```
+
+If "Proceed anyway": record failures in the review outcome. If "Abort": stop.
+
+### Step 3: Record Review Outcome
 
 Compile the review outcome for use in the PR description:
 
@@ -227,19 +261,34 @@ Compile the review outcome for use in the PR description:
 Review outcome: [APPROVED | NEEDS REVISION (fixed) | MANUAL REVIEW REQUIRED]
 Fixes: [applied | partially applied | skipped | none needed]
 Remaining: [any critical findings that remain, or "none"]
+Verification: [pass | fail (details) - from post-fix re-verification]
 ```
 
 This record is passed to the PR description generation phase.
 
-## Bounded Iteration Rule
+## Post-Fix Squash
 
-**Do NOT re-run /team-branch-review after /team-branch-fix completes.**
+After the fix pass completes and any cleanup commits are made, fix commits
+should be squashed into the original commits they fix. The PR should show
+clean history, not "add feature X" followed by "fix review finding in X."
 
-One review + one fix pass is the maximum. Reasoning:
-- /team-branch-review spawns 2-6 agents with Codex validation (expensive)
-- /team-branch-fix spawns N fixer agents with Codex validation (expensive)
-- Looping risks unbounded cost and context exhaustion
+**Approaches** (lead chooses based on complexity):
+
+- **git rebase with fixup**: for simple cases where each fix maps to a clear
+  parent commit. Use `git rebase --autosquash` with fixup commits, or manual
+  rebase commands (NOT `git rebase -i` which requires interactive input).
+- **/clean-copy rewrite**: if the commit history is messy after fixes, use
+  /clean-copy to rewrite the branch with clean narrative history.
+
+Skip squashing if the fix pass made no commits or only trivial changes.
+
+## Iteration Boundary
+
+One /team-branch-review pass followed by at most one /team-branch-fix pass.
+No re-review after fixes. This boundary exists for cost control: review and
+fix passes consume significant tokens, and unbounded looping risks diminishing
+returns when the reviewer and fixer disagree on style issues.
 
 If critical findings remain after the fix pass, report them in the PR
-description and final handoff rather than looping. The user can always run
-`/team-branch-review` manually for a second pass.
+description rather than looping. The user can always run `/team-branch-review`
+manually for additional passes.

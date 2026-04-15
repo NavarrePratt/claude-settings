@@ -28,7 +28,8 @@ br list --json --limit 0
 # Step 1b: Batch fetch with parent fields
 br show <id1> <id2> <id3> ... --json
 # br show accepts multiple IDs in one call
-# Process in batches of ~50 if the bead set is large
+# For large bead sets, process br show in batches to avoid
+# argument length limits and reduce per-call response size.
 ```
 
 Build the descendant set iteratively:
@@ -101,9 +102,10 @@ in Wave 1 sorted by priority.
 ### Step 6: Handle Edge Cases
 
 **No ready beads (all blocked)**:
-Report blocked beads and their blocking dependencies. For each blocked bead,
-run `br show <id> --json` and inspect the `blocked_by` field to identify
-what dependency is preventing it from becoming ready.
+Report blocked beads and their blocking dependencies. Use the batch-fetched
+data from Step 1b (which includes `dependencies` and `dependents` arrays)
+to identify what dependency is preventing each bead from becoming ready.
+No additional `br show` calls are needed.
 
 **Partially ready**:
 Show which beads are ready (in the execution plan) and which are blocked.
@@ -111,14 +113,8 @@ Proceed with the ready beads - blocked beads will become ready as their
 dependencies are completed.
 
 **All done**:
-If every bead in the tree (depth > 0) has status=closed, report:
+If every descendant bead has status=closed, report:
 "All beads in epic already closed - nothing to implement."
-
-**Truncated tree**:
-If any node has `truncated: true`, warn the user:
-"Dependency tree was truncated at depth 10. Some deeply nested beads may not
-appear in this plan. Use `br dep tree --json <epic_id> --max-depth 20` to
-see deeper."
 
 **In-progress beads**:
 If any bead has status=in_progress, warn:

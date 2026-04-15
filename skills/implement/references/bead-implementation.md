@@ -1,19 +1,21 @@
 # Bead Implementation Procedure
 
-Per-bead claim, load, implement, verify, close/skip cycle for the /implement skill.
+Per-bead claim, load, implement, verify, close/skip cycle for the /implement
+skill, plus commit strategy guidance.
 
 ## Implementation Mode Decision
 
-The lead agent decides implementation mode based on epic size:
+The lead agent decides implementation mode based on the work characteristics:
 
-- **Inline** (5 or fewer beads in execution plan): the lead agent implements each
-  bead directly using Read, Edit, Write, Bash, Grep, Glob tools. No subagents.
-- **Subagent** (6+ beads): spawn one Agent per bead. The lead reads summary files
-  between beads to maintain cross-bead context.
+**Favor inline when:** few beads, tightly coupled work sharing files or
+context, or when the lead needs deep understanding of all changes for later
+review and PR phases.
 
-This threshold balances context window pressure against coordination overhead.
-Small epics fit comfortably in a single context. Large epics benefit from
-isolated contexts per bead plus summary-based continuity.
+**Favor subagent when:** multiple independent beads, different modules or
+files, or context budget is a concern.
+
+The lead evaluates these tradeoffs at runtime rather than following a fixed
+bead count threshold.
 
 ## Per-Bead Cycle
 
@@ -35,8 +37,8 @@ Extract from the JSON:
 - `description` - full bead description with acceptance criteria
 - `dependencies` - any upstream beads (for context on what was already done)
 
-Parse the `## Verification` section from the description to extract verification
-commands. These are typically formatted as:
+Parse the `## Verification` section from the description to extract
+verification commands. These are typically formatted as:
 ```
 ## Verification
 - [ ] `command1` passes
@@ -47,7 +49,7 @@ Extract the backtick-enclosed commands into a list for Step 4.
 
 ### Step 3: Implement
 
-#### Inline Mode (small epics)
+#### Inline Mode
 
 The lead agent implements directly:
 
@@ -56,51 +58,77 @@ The lead agent implements directly:
 3. Follow existing project patterns (check CLAUDE.md, existing code)
 4. Stay focused on the bead's scope - do not expand beyond acceptance criteria
 
-#### Subagent Mode (large epics)
+#### Subagent Mode
 
-Spawn a foreground agent per bead with a 10-minute timeout:
+Spawn one Agent per bead, wait for completion, read the summary, then
+spawn the next. Sequential execution keeps the worktree in a consistent
+state and avoids file-level conflicts between concurrent agents.
 
 ```
 Agent(
   description: "Implement <BEAD_ID>",
-  prompt: <rendered bead-prompt.md template>,
+  prompt: <rendered template for bead>,
   mode: "bypassPermissions"
 )
 ```
 
-If the agent has not completed after 10 minutes of wall time, treat it as a
-timeout: reset the bead to open status and record as skipped.
+**Why bypassPermissions**: subagents need to run verification commands, edit
+files, and execute build tooling without interactive prompts. The worktree
+provides isolation from the main repo, limiting blast radius.
+
+**Timeout caveat**: Agent() is a blocking foreground call with no enforced
+timeout parameter. The "10-minute timeout" is aspirational guidance for
+subagent prompt design (telling the agent to be concise), not an enforced
+mechanism. If an agent hangs, the lead agent hangs too.
 
 Template variables to substitute in templates/bead-prompt.md:
 - `BEAD_ID` - the bead identifier
 - `BEAD_TITLE` - short title from bead
 - `BEAD_DESCRIPTION` - full description text
-- `BEAD_PARENT` - parent epic ID (for discovery issue linking)
+- `BEAD_PARENT` - parent epic ID
 - `WORKTREE_PATH` - absolute path to the worktree
-- `VERIFICATION_COMMANDS` - extracted verification commands from description
-- `PRIOR_SUMMARIES` - concatenated summaries from previously completed beads
+- `VERIFICATION_COMMANDS` - extracted verification commands
+- `PRIOR_SUMMARIES` - context from previously completed beads (capped; see Cross-Bead Context)
+- `REPO_NAME` - repository directory name
+- `EPIC_ID` - epic bead ID (for artifact namespace)
 
 After the agent completes, read its summary file:
 ```
-/tmp/implement-<BRANCH_NAME>/<BEAD_ID>-summary.md
+/tmp/<REPO_NAME>-<EPIC_ID>/<BEAD_ID>-summary.md
 ```
 
 Accumulate summaries for PRIOR_SUMMARIES in subsequent bead prompts.
 
 ### Step 4: Verify
 
+**Verification contract**: in subagent mode, the subagent runs bead
+verification commands as part of its implementation (see bead-prompt.md
+instruction 3). Step 4 applies when the lead implements inline, or as a
+confirmation check after a subagent reports results. The lead separately
+runs post-wave integration verification (see Post-Wave Verification below).
+
 Run each verification command extracted in Step 2.
+
+**If zero verification commands were extracted** (no `## Verification` section
+in the bead description): do not silently skip verification. Instead:
+
+1. Check for project-level verification commands (from CLAUDE.md, Makefile,
+   mise tasks, package.json scripts, or other discovered tooling).
+2. If project-level commands exist, run those as a fallback.
+3. If no verification is available at all, warn the user and get explicit
+   confirmation to proceed without verification via AskUserQuestion.
 
 **If all pass**: proceed to Step 5 (close).
 
-**If any fail**: attempt to fix the issue.
-- In inline mode: fix directly
-- In subagent mode: the agent should have already attempted fixes; if the lead
-  finds failures, attempt one targeted fix
+**If any fail**: assess the error type before deciding on retry.
 
-Then re-run ALL verification commands once more.
+- **Trivial failures** (typos, missing imports, wrong paths): fix and re-run.
+  These are mechanical errors that the fix addresses completely.
+- **Deeper failures** (test failures from architectural mismatches, integration
+  issues, missing dependencies): fail fast. The bead can be retried later with
+  more context. Attempting a quick fix for a structural problem wastes time.
 
-**If still failing after retry**: proceed to Step 6 (handle failure).
+The lead assesses the error to decide, not a fixed retry count.
 
 ### Step 5: Close on Success
 
@@ -108,8 +136,8 @@ Then re-run ALL verification commands once more.
 br close <BEAD_ID> --reason "<brief summary of what was done>"
 ```
 
-The reason should be a concise description of the implementation, not a list
-of files changed. The diff captures the what; the reason captures the why.
+The reason should be concise - the diff captures the what; the reason
+captures the why.
 
 ### Step 6: Handle Failure
 
@@ -117,28 +145,101 @@ of files changed. The diff captures the what; the reason captures the why.
 br update <BEAD_ID> --status open --notes "SKIPPED: <what failed and why>"
 ```
 
-Record the bead as skipped in the execution tracking. Include:
-- Which verification command(s) failed
-- What was attempted to fix it
-- Why the retry also failed
+Record the bead as skipped. Include which verification failed, what was
+attempted, and why it did not work.
 
-Continue to the next bead. Skipped beads do not block subsequent waves unless
-they have explicit blocks dependencies on later beads.
+Continue to the next bead. Skipped beads do not block subsequent waves
+unless they have explicit blocks dependencies.
 
 ## Cross-Bead Context (Subagent Mode)
 
 When using subagents, the lead maintains continuity through summary files:
 
-1. Each subagent writes a summary to /tmp/implement-<BRANCH_NAME>/<BEAD_ID>-summary.md
+1. Each subagent writes a summary to `/tmp/<REPO_NAME>-<EPIC_ID>/<BEAD_ID>-summary.md`
 2. Summary format:
    - Files created or modified (paths only)
    - What the bead accomplished (one paragraph)
    - Discoveries or follow-up needed
-3. Before spawning the next subagent, the lead reads ALL prior summaries
+3. Before spawning the next subagent, the lead reads all prior summaries
 4. Prior summaries are injected into the next bead prompt via PRIOR_SUMMARIES
 
-This preserves cross-bead awareness without holding full implementation context
-in any single agent window.
+### Capping Prior Context
+
+PRIOR_SUMMARIES grows with each bead. To keep subagent prompts within
+reasonable token budgets:
+
+- **Current wave + immediately preceding wave**: include full summaries from
+  beads in these two waves.
+- **Older waves**: include only the "Files Changed" section from each summary.
+  The file list provides enough context for path-level awareness without
+  carrying full narrative from every prior bead.
+
+This keeps total PRIOR_SUMMARIES size roughly proportional to two waves of
+work rather than the entire epic history.
+
+## Post-Wave Verification
+
+After all beads in a wave complete and BEFORE committing, the lead runs
+integration verification across the wave's changes. This catches cross-bead
+interactions that individual bead verification cannot detect.
+
+1. Collect the union of all verification commands from beads in the wave
+   (extracted from each bead's `## Verification` section in Step 2).
+2. Deduplicate commands (multiple beads may share the same lint/test/build).
+3. Run each unique command in the worktree.
+4. **If all pass**: proceed to commit.
+5. **If any fail**: diagnose the failure. If it is a cross-bead integration
+   issue (e.g., conflicting imports, incompatible changes), fix it before
+   committing. If the failure is unrelated to the wave's changes, note it
+   and proceed.
+
+This verification is the lead's responsibility. Subagents run their own bead
+verification during implementation (bead-prompt.md instruction 3), but the
+lead re-runs verification at the wave boundary to catch integration issues.
+
+## Commit Strategy
+
+The lead agent decides when and how to commit based on the work.
+
+### Default: Wave-Boundary Commits
+
+Accumulate changes across a wave, then group into logical commits at the
+boundary. This is the default because it produces the cleanest history when
+beads are tightly coupled within a wave.
+
+### Simplification: Per-Bead Commits
+
+When beads are clearly independent (different modules, no shared files),
+commit after each bead completes. This is simpler and maximizes atomicity.
+
+### Grouping Heuristic (for wave-boundary commits)
+
+After all beads in a wave complete, review accumulated changes and group
+into logical commits:
+
+1. **Survey**: `git diff --stat` and `git diff --name-only`
+
+2. **Group by functional area**:
+   - Same-concern files together (source + config, handler + route)
+   - Test files with the code they test
+   - Unrelated changes in separate commits
+   - Each commit should introduce a single coherent idea
+
+3. **Create commits**: stage files for each logical group and use `/commit`
+   to create the commit with proper formatting.
+
+### Skipped Beads
+
+Before committing, check for partial changes from skipped beads. Revert
+incomplete work with `git checkout -- <files>` if it would break the build.
+Otherwise leave it for the user to review.
+
+### Commit Message Content
+
+- Explain why the change was made, not what files were changed
+- Reference the epic being implemented for context
+- Do not include bead IDs (internal tracking detail)
+- Do not include specific counts of items (counts go stale)
 
 ## Error Recovery
 
@@ -149,3 +250,4 @@ in any single agent window.
 | Verification command not found | Skip that check, warn in output |
 | All beads in a wave skipped | Log warning, proceed to next wave |
 | Git conflicts in worktree | Stop execution, report to user |
+| Commit history too messy to salvage | Use /clean-copy to rewrite the branch with clean narrative history |
