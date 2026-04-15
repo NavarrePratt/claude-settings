@@ -42,9 +42,6 @@ Before handing off to the subagent, use AskUserQuestion to clarify anything unce
 - Dependencies - if other beads were discussed as related/blocking
 - Implementation approach - if multiple valid approaches were discussed
 
-**Always ask:**
-- Epic linkage - "Should this be linked to an existing epic?" (provide list if epics exist)
-
 Use quick dropdown options rather than open-ended questions. Example:
 ```
 questions:
@@ -78,7 +75,6 @@ Create a bead (issue) using the br CLI. Here is everything you need:
   - [criterion 1]
   - [criterion 2]
 - Known Files: [files from conversation, or "none - discover from codebase"]
-- Epic Linkage: [epic ID, or "none"]
 - Working Directory: [pwd]
 
 ## Your Tasks
@@ -92,8 +88,8 @@ Create a bead (issue) using the br CLI. Here is everything you need:
 2. **Discover relevant files** (only if Known Files says "none" or is incomplete) -
    Find files that will need modification and related test files.
 
-3. **Create the bead** using br create:
-   br create "Title" --priority <N> --description "$(cat <<'EOF'
+3. **Create the bead** using br create (deferred status until epic is linked):
+   br create 'Title' --priority <N> --status deferred --description "$(cat <<'BEAD_DESC_EOF'
    # Description
    [What and why from brief]
 
@@ -108,11 +104,29 @@ Create a bead (issue) using the br CLI. Here is everything you need:
    - [ ] `[discovered test command]` passes
 
    If implementation reveals new issues, create separate issues for investigation.
-   EOF
+   BEAD_DESC_EOF
    )" --json
 
-4. **Epic linkage** (if epic ID provided):
+4. **Create wrapping epic and link** (every bead gets its own epic):
+   ```bash
+   br create '[topic name]' --type epic --priority <same as bead> --description "$(cat <<'BEAD_DESC_EOF'
+   # Overview
+   Wrapping epic for [brief topic description].
+
+   # Scope
+   [One sentence describing what this epic covers]
+
+   # Implementation Issues
+   (linked below)
+
+   # Success Criteria
+   All linked beads completed.
+   BEAD_DESC_EOF
+   )" --json
+   # Extract epic ID from output, then link and publish:
    br dep add <new-bead-id> <epic-id> --type parent-child
+   br update <new-bead-id> --status open
+   ```
 
 5. **Return a summary** in this exact format:
    Created: <bead-id>
@@ -120,7 +134,7 @@ Create a bead (issue) using the br CLI. Here is everything you need:
    Priority: P<n>
    Status: open
    Description: <2-3 sentence summary>
-   Linked to epic: <epic-id or "None">
+   Linked to epic: <epic-id>
 ```
 
 ### Step 4: Report Result
