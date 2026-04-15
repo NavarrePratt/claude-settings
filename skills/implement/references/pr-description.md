@@ -15,6 +15,7 @@ conversation context.
 | Commit log | `git log --oneline <BASE_REF>..HEAD` | Phase 5 |
 | Review outcome | Review outcome record | Phase 4 |
 | Verification results | Bead verification runs (Phase 3) or post-fix re-verification (Phase 4) | Phase 3/4 |
+| REPO_NAME and EPIC_ID | Phase 2 state / conversation context | Phase 0/2 |
 
 ## Template
 
@@ -137,8 +138,8 @@ No explicit verification commands defined in bead descriptions.
 
 ## Output
 
-Save the rendered template to `.claude/pr-descriptions/feat-<BRANCH_NAME>.md`
-in the worktree. Create the directory if it does not exist.
+Save the rendered template to `/tmp/<REPO_NAME>-<EPIC_ID>/pr-description.md`.
+The directory is created during Phase 2 (worktree setup).
 
 Present the full rendered description to the user in the conversation for
 review. Allow iterative edits via conversation ("change the summary to...",

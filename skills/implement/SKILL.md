@@ -115,8 +115,8 @@ Follow the reference file to:
 After Phase 2 completes, write a state file to
 `/tmp/<REPO_NAME>-<EPIC_ID>/state.json` to survive context compaction. This
 is context protection, not a full resume system - it helps the agent recall
-where it was. Use `mktemp -d` or verify directory ownership before writing to
-avoid symlink attacks on the predictable `/tmp` path.
+where it was. Verify directory ownership before writing to avoid symlink
+attacks on the predictable `/tmp` path.
 
 `<REPO_NAME>` is the repository directory name (REPO_NAME, computed in
 worktree-setup.md Step 1).
@@ -254,7 +254,7 @@ references/pr-description.md:
 
 **Step 3: Save and Present**
 
-Save to `.claude/pr-descriptions/feat-<BRANCH_NAME>.md` in the worktree.
+Save to `/tmp/<REPO_NAME>-<EPIC_ID>/pr-description.md`.
 Present to user for iterative editing.
 
 ---
@@ -273,7 +273,7 @@ Worktree: <WORKTREE_PATH>
 Beads: implemented and closed (list skipped beads if any)
 Commits: <git log --oneline <BASE_REF>..HEAD>
 Review: <review outcome summary>
-PR description: .claude/pr-descriptions/feat-<BRANCH_NAME>.md
+PR description: /tmp/<REPO_NAME>-<EPIC_ID>/pr-description.md
 ```
 
 **Step 2: Action Options**
@@ -297,7 +297,8 @@ questions: [{
 **Step 3: Execute Choice**
 
 **Push and create PR**: requires explicit user confirmation per CLAUDE.md.
-Show commits, confirm, then push and create PR with body-file.
+Show commits, confirm, then push and create PR with the body file from
+`/tmp/<REPO_NAME>-<EPIC_ID>/pr-description.md`.
 
 **Push only**: confirm, push with `-u`.
 
