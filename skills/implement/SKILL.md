@@ -142,6 +142,10 @@ Write points:
 - During Phase 3 (after each bead): update bead_statuses and last_completed_phase
 - After Phase 4 (review done): update review_outcome
 
+Note: `bead_statuses` stores execution status only (pending, done, skipped), not
+skip reasons or other details. After context compaction, re-fetch skip reasons
+and bead details from `br show <id> --json` rather than relying on in-memory state.
+
 The state file lives in /tmp (outside the worktree) to avoid dirtying git.
 
 ---
@@ -261,12 +265,57 @@ Present to user for iterative editing.
 
 ### Phase 6: User Handoff
 
+**Step 0: Resolve Epic Status**
+
+After all beads are processed, resolve the epic's status based on bead
+completion, not review outcome. Review quality is captured in Phase 4 and
+surfaced in the PR description - epic status tracks whether work is done.
+
+Classify all descendant beads by their current status. If context was
+compacted, re-derive the descendant list from `br show <EPIC_ID> --json`
+(the parent-field scan from Phase 1 is repeatable). The `bead_statuses` in
+the state file is a compaction safety net for execution plan beads only - it
+is not the source of truth. Re-query `br show <id> --json` for every
+descendant to get current statuses.
+
+Classify by current status (checked at handoff time, not plan time):
+
+- **Completed**: current status is closed
+- **Skipped**: current status is open with SKIPPED notes (failed verification)
+- **In-progress**: current status is in_progress (treat as not-closed)
+- **Blocked/other**: any remaining status (open without skip notes, deferred, etc.)
+
+**If ALL descendant beads are closed** (completed count equals total descendants):
+
+```bash
+br close <EPIC_ID> --reason "All beads implemented via /implement"
+```
+
+No user confirmation needed - the user approved the plan in Phase 1.
+
+**If some beads were skipped, remain blocked, or are in-progress elsewhere** (partial completion):
+
+```bash
+br update <EPIC_ID> --notes "$(cat <<'EOF'
+COMPLETED: <list>. SKIPPED: <list with reasons>. BLOCKED: <list>. IN_PROGRESS: <list>.
+EOF
+)"
+```
+
+The epic stays open for a future session to pick up remaining work.
+
+**If br close or br update fails**: warn but do not block the handoff. Epic
+status resolution is best-effort.
+
+Record the epic status outcome (closed, partial, or error) for the summary.
+
 **Step 1: Final Summary**
 
 ```
 Implementation Complete
 
 Epic: <EPIC_TITLE> (<EPIC_ID>)
+Epic status: <closed | updated with notes (partial completion) | unchanged (error)>
 Branch: feat/<BRANCH_NAME>
 Worktree: <WORKTREE_PATH>
 
@@ -358,5 +407,6 @@ worktree preservation path.
 - **Push requires approval**: never push without explicit user confirmation
 - **PR creation requires approval**: never create PR without confirmation
 - **Iterative PR editing**: allow user to refine description before saving
+- **Epic status resolution**: auto-close the epic when all beads are done, update notes on partial completion. Best-effort - never block handoff on a br failure
 
 $ARGUMENTS
