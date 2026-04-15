@@ -2,6 +2,15 @@
 
 Common procedures for verification discovery and bead creation across all issue-plan skills.
 
+## Core Principle: All Beads Require an Epic
+
+Every bead must belong to an epic before it is published. Standalone beads are not allowed.
+
+Each planning skill invocation creates its own epic and links all beads under it.
+This ensures organizational consistency across the tracker, enables the /implement
+skill (which resolves work through epic descendants), and prevents orphaned beads
+that are invisible to epic-level status reporting.
+
 ## Verification Command Discovery
 
 Run a focused Explore query to find exact development commands:
