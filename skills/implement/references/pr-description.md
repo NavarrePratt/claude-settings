@@ -12,9 +12,9 @@ conversation context.
 |-------|--------|-------|
 | Epic title and ID | br show output | Phase 0 |
 | Epic description | br show output | Phase 0 |
-| Commit log | `git log --oneline main..HEAD` | Phase 5 |
+| Commit log | `git log --oneline <BASE_REF>..HEAD` | Phase 5 |
 | Review outcome | Review outcome record | Phase 4 |
-| Verification results | Bead verification runs | Phase 3 |
+| Verification results | Bead verification runs (Phase 3) or post-fix re-verification (Phase 4) | Phase 3/4 |
 
 ## Template
 
@@ -66,10 +66,10 @@ context upfront instead of rediscovering it from the diff.
 
 Example:
 ```markdown
-Bounded the review-fix loop to 2 iterations rather than running until clean.
-Unbounded loops risk burning tokens on diminishing returns when the reviewer
-and fixer disagree on style issues. Two passes catches real bugs while keeping
-cost predictable.
+Bounded the review-fix pipeline to one review pass and one fix pass rather
+than looping until clean. Unbounded loops risk burning tokens on diminishing
+returns when the reviewer and fixer disagree on style issues. A single
+bounded pass catches real bugs while keeping cost predictable.
 
 Chose to invoke /team-branch-review as a skill rather than calling the agent
 team directly. This keeps the review pipeline decoupled from /implement so
@@ -113,8 +113,15 @@ deferred") but the template should not require it.
 
 ## Generating Verification Results (VERIFICATION_RESULTS)
 
-List the verification commands that were run during Phase 3 bead implementation.
-Use the last known state (from the most recent run of each command).
+List the verification commands that were run and their results. Use the most
+recent run of each command.
+
+**If Phase 4 made code changes** (fix commits exist): use the post-fix
+re-verification results from Phase 4 Step 2, not the Phase 3 results. The
+Phase 3 results are stale after fix changes.
+
+**If Phase 4 made no code changes** (no fixes applied, or review was clean):
+use the Phase 3 results directly.
 
 ```markdown
 - `mise run lint` - PASS

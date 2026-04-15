@@ -35,7 +35,7 @@ PRIOR_SUMMARIES
    - If it still fails after one retry: note the failure in your summary
 
 4. **Do NOT commit**: Leave all changes in the working tree. The lead agent
-   handles commits at wave boundaries.
+   handles commits.
 
 5. **Do NOT push**: No remote operations of any kind.
 
@@ -44,7 +44,7 @@ PRIOR_SUMMARIES
    create beads yourself - the lead agent handles that.
 
 7. **Write your summary**: When done, write a summary file to:
-   `/tmp/implement-BRANCH_NAME/BEAD_ID-summary.md`
+   `/tmp/REPO_NAME-EPIC_ID/BEAD_ID-summary.md`
 
 ## Summary Format
 
@@ -74,5 +74,6 @@ One paragraph describing what was implemented and why.
 - Stay within the bead's scope - do not implement work for other beads
 - Do not modify files outside the worktree
 - Do not run destructive git commands (reset, clean, checkout .)
+- Do not use TaskCreate or TaskUpdate - the lead agent manages task tracking
 - If you encounter a blocker that prevents implementation, write a summary
   explaining what blocked you and exit
