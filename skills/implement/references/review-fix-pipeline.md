@@ -146,18 +146,19 @@ questions: [{
 
 **If actionable_count > 0** (any outcome label):
 
-Invoke the fix pipeline. The invocation mode depends on the caller:
+Invoke the fix pipeline. The invocation mode depends on the caller's
+**AUTO_MODE** setting:
 
-- **From /implement** (autonomous): pass `--auto` to skip the interactive
-  finding interview. The fix skill will auto-select all actionable findings
-  and skip disputed ones.
+- **From /implement with --auto** (autonomous): pass `--auto` to skip the
+  interactive finding interview. The fix skill will auto-select all actionable
+  findings and skip disputed ones.
 
   ```
   Skill(skill: "team-branch-fix", args: "--auto <paste the review report>")
   ```
 
-- **Standalone** (interactive): no `--auto` flag. The fix skill presents
-  each finding to the user for include/exclude.
+- **From /implement without --auto, or standalone** (interactive): no `--auto`
+  flag. The fix skill presents each finding to the user for include/exclude.
 
   ```
   Skill(skill: "team-branch-fix", args: "<paste the review report>")
