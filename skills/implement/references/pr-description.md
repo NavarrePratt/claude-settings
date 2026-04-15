@@ -81,53 +81,35 @@ reviewer configuration.
 
 Derive from the review outcome record compiled in Phase 4.
 
-**If APPROVED, no actionable findings**:
+Select the case that matches the Phase 4 review outcome record. The record
+has three fields: outcome label, fixes status, and remaining issues. Map
+directly from those fields - do not require information the record does not
+capture.
+
+**If no findings** (fixes: "none needed"):
 ```
-Reviewed by multi-agent team: APPROVED, no actionable findings.
+Reviewed by multi-agent team: no actionable findings.
 ```
 
-**If APPROVED, actionable findings fixed**:
-```
-Reviewed by multi-agent team: APPROVED (no critical/high). Medium/low findings identified and fixed.
-```
-
-**If APPROVED, fix pass attempted but verification failed**:
-```
-Reviewed by multi-agent team: APPROVED. Fix pass attempted for medium/low findings but verification failed. Unresolved findings noted for manual review.
-```
-
-**If NEEDS REVISION, fixes applied**:
+**If findings fixed** (fixes: "applied"):
 ```
 Reviewed by multi-agent team: findings identified and fixed.
 ```
 
-**If NEEDS REVISION, some fixed and some deferred**:
+**If findings remain for manual review** (fixes: "partially applied" or "skipped", or remaining is non-empty):
 ```
-Reviewed by multi-agent team: findings identified, some fixed, some deferred for manual review.
-```
-
-**If review was skipped** (no commits, --skip-review, or user choice):
-```
-Review skipped: [reason - e.g., "no commits on branch" or "user opted out"]
+Reviewed by multi-agent team: findings identified. Some remain for manual review.
 ```
 
-**If MANUAL REVIEW REQUIRED, actionable findings fixed, disputed deferred**:
+**If review was skipped** (no commits, or user opted out):
 ```
-Reviewed by multi-agent team: actionable findings fixed. Disputed findings deferred for manual review.
-```
-
-**If MANUAL REVIEW REQUIRED, disputed-only (no actionable), user skipped**:
-```
-Review flagged disputed findings only. No automated fixes available. Deferred for manual review.
-```
-
-**If MANUAL REVIEW REQUIRED, user aborted or skipped all fixes**:
-```
-Review flagged disputed findings. User opted to skip automated fixes. Unresolved findings noted for manual review.
+Review skipped: [reason].
 ```
 
 Do not include numeric counts of findings, fixes, or deferrals. The review
-report contains the details; the PR summary should be qualitative.
+report contains the details; the PR summary should be qualitative. The agent
+may add brief context from the conversation (e.g., "disputed findings
+deferred") but the template should not require it.
 
 ## Generating Verification Results (VERIFICATION_RESULTS)
 

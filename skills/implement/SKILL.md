@@ -561,7 +561,10 @@ branching logic, and AskUserQuestion templates.
 After the fix pass completes:
 
 1. Verify clean git state: `git status --porcelain`
-2. If uncommitted changes remain, run /commit
+2. If uncommitted changes remain and the fix pass reported success,
+   run /commit. If the fix pass reported verification failures, do NOT
+   auto-commit - surface the dirty state to the user via AskUserQuestion
+   and let them decide whether to commit, revert, or fix manually.
 3. Record review outcome for Phase 5 PR description:
    - Outcome label (APPROVED, NEEDS REVISION, MANUAL REVIEW REQUIRED)
    - Whether fixes were applied, deferred, or skipped
@@ -599,7 +602,7 @@ available from prior phases:
 2. Epic description: from `br show <EPIC_ID> --json` (Phase 0)
 3. Review outcome record from Phase 4 (or "review skipped" if Phase 4 was skipped)
 
-Run these commands to gather remaining inputs:
+Run this command to gather the commit log:
 
 ```bash
 git log --oneline main..HEAD

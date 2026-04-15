@@ -119,7 +119,7 @@ Remaining: none
 
 Proceed to Post-Fix Cleanup (skip fix pipeline).
 
-**If actionable_count == 0 and disputed_count > 0** (MANUAL REVIEW REQUIRED, disputed-only):
+**If actionable_count == 0 and disputed_count > 0** (any outcome label - disputed-only):
 
 All findings are disputed - no automated fixes possible. Present disputed
 findings to the user:
@@ -197,9 +197,27 @@ git status --porcelain
 
 If uncommitted changes exist (fix agents may have left unstaged work):
 
+**If the fix pass reported success** (all fixes applied, no verification failures):
+
 > "Post-fix uncommitted changes detected. Running /commit."
 
 Invoke /commit to commit remaining changes.
+
+**If the fix pass reported verification failures**: do NOT auto-commit.
+Surface the dirty state to the user via AskUserQuestion:
+
+```
+questions: [{
+  question: "Fix pass had verification failures. Uncommitted changes remain. How to proceed?",
+  header: "Failed fixes",
+  options: [
+    { label: "Commit anyway", description: "Commit the changes despite verification failures" },
+    { label: "Revert changes", description: "Discard all uncommitted fix changes" },
+    { label: "Leave for manual review", description: "Keep changes uncommitted, proceed to PR description" }
+  ],
+  multiSelect: false
+}]
+```
 
 ### Step 2: Record Review Outcome
 
