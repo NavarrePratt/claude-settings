@@ -102,17 +102,22 @@ Proceed to the next phase.
 
 Confirmed Critical or High findings remain.
 
-Action: invoke the fix pipeline:
+Action: invoke the fix pipeline with --auto to bypass user interview questions:
 
 ```
-Skill(skill: "team-branch-fix", args: "<paste the review report>")
+Skill(skill: "team-branch-fix", args: "--auto <paste the review report>")
 ```
+
+The `--auto` flag makes the fix skill fully autonomous: confirmed findings are
+auto-approved, disputed findings are auto-skipped (requires human judgment),
+Med/Low findings are batch-approved, and fixup commit strategy is used with
+auto-rebase. Push and PR creation remain human-gated in Phase 6.
 
 The fix skill handles:
-- User interview (which findings to fix via AskUserQuestion)
+- Auto-decisions for all findings (logged to Auto-Mode Decision Log)
 - Fixer agent spawning
 - Codex validation
-- Commit strategy (fixup/single/multiple)
+- Commit strategy (fixup with auto-rebase, single commit fallback on failure)
 
 After /team-branch-fix completes, proceed to Post-Fix Cleanup.
 
@@ -140,7 +145,7 @@ questions: [{
 **If "Fix confirmed findings"**:
 
 ```
-Skill(skill: "team-branch-fix", args: "<paste the review report, noting disputed findings should be skipped>")
+Skill(skill: "team-branch-fix", args: "--auto <paste the review report, noting disputed findings should be skipped>")
 ```
 
 After fix completes, proceed to Post-Fix Cleanup. Record disputed findings

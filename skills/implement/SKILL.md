@@ -539,14 +539,16 @@ Read the review report from the conversation. The outcome line is:
 **If APPROVED**: proceed to Phase 5 with note "Review: APPROVED, no issues
 found."
 
-**If NEEDS REVISION**: run /team-branch-fix with the review report above.
-The fix skill handles user interview, fixer agent spawning, Codex validation,
-and commit strategy. After fix completes, proceed to Step 4.
+**If NEEDS REVISION**: run /team-branch-fix with --auto and the review report.
+The --auto flag makes the fix pipeline fully autonomous: confirmed findings are
+auto-approved, disputed findings are auto-skipped, and fixup commit strategy is
+used. Push and PR gates remain human-gated in Phase 6. After fix completes,
+proceed to Step 4.
 
 **If MANUAL REVIEW REQUIRED**: present disputed findings to the user via
 AskUserQuestion with three options:
 
-- "Fix confirmed findings" - run /team-branch-fix for non-disputed findings
+- "Fix confirmed findings" - run /team-branch-fix with --auto for non-disputed findings
 - "Skip review fixes" - proceed to Phase 5 with unresolved findings noted
 - "Abort" - stop the implement pipeline, leave branch as-is
 
@@ -794,6 +796,7 @@ Report:
 - **No counts in commits**: counts go stale before the commit is pushed
 - **Worktree isolation**: all work happens in .claude/worktrees/implement-*
 - **One review cycle**: never re-run /team-branch-review after /team-branch-fix
+- **Auto-mode for fixes**: /team-branch-fix is always invoked with --auto from /implement
 - **Skill invocation**: invoke /team-branch-review and /team-branch-fix via the Skill() tool, not natural language text
 - **Review is post-implementation**: review runs after all beads are implemented, not per-bead
 - **Clean state before review**: all changes must be committed before review starts
