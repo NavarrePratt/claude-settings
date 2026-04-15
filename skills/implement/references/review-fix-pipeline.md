@@ -73,7 +73,7 @@ The review skill detects branch and base commit automatically via its Context
 section. It spawns reviewer agents, validates findings with Codex, and produces
 a report with one of three outcomes.
 
-## Parse Outcome
+## Parse Outcome and Compute Actionable Findings
 
 After /team-branch-review completes, read the review report from the
 conversation. The report follows the template at
@@ -85,88 +85,105 @@ The outcome line appears as:
 ## Outcome: [APPROVED | NEEDS REVISION | MANUAL REVIEW REQUIRED]
 ```
 
-### Outcome: APPROVED
+Record the outcome label for the PR description, but do NOT use it to gate
+fix execution. Instead, compute the actionable finding count.
 
-No confirmed Critical or High findings after Codex validation.
+### Actionable Finding Definition
 
-Action: skip the fix pipeline entirely. Record for the PR description:
+A finding is **actionable** if it is:
+- Confirmed (any severity) - both Claude and Codex agree
+- Severity-adjusted - Codex changed severity but confirmed the issue
+- Codex-only (not disputed) - new finding from Codex validation
+
+A finding is **NOT actionable** if it is:
+- Disputed - Claude and Codex disagree on whether the issue exists
+
+### Step 1: Compute Actionable Finding Count
+
+Parse the review report's findings table. Count findings that match the
+actionable criteria above. Record:
+- `actionable_count`: total actionable findings
+- `disputed_count`: total disputed findings
+
+### Step 2: Branch on Actionable Count
+
+**If actionable_count == 0 and disputed_count == 0**:
+
+No findings at all. Record for PR description:
 
 ```
 Review outcome: APPROVED
-Findings: No critical or high issues found.
+Fixes: none needed
+Remaining: none
 ```
 
-Proceed to the next phase.
+Proceed to Post-Fix Cleanup (skip fix pipeline).
 
-### Outcome: NEEDS REVISION
+**If actionable_count == 0 and disputed_count > 0** (MANUAL REVIEW REQUIRED, disputed-only):
 
-Confirmed Critical or High findings remain.
-
-Action: invoke the fix pipeline with --auto to bypass user interview questions:
-
-```
-Skill(skill: "team-branch-fix", args: "--auto <paste the review report>")
-```
-
-The `--auto` flag makes the fix skill fully autonomous: confirmed findings are
-auto-approved, disputed findings are auto-skipped (requires human judgment),
-Med/Low findings are batch-approved, and fixup commit strategy is used with
-auto-rebase. Push and PR creation remain human-gated in Phase 6.
-
-The fix skill handles:
-- Auto-decisions for all findings (logged to Auto-Mode Decision Log)
-- Fixer agent spawning
-- Codex validation
-- Commit strategy (fixup with auto-rebase, single commit fallback on failure)
-
-After /team-branch-fix completes, proceed to Post-Fix Cleanup.
-
-### Outcome: MANUAL REVIEW REQUIRED
-
-Significant disagreement (>50% of Critical/High disputed) between Claude
-and Codex reviewers.
-
-Action: present the disputed findings to the user and ask how to proceed.
+All findings are disputed - no automated fixes possible. Present disputed
+findings to the user:
 
 Use AskUserQuestion:
 ```
 questions: [{
-  question: "Review found disputed findings that need human judgment. How to proceed?",
+  question: "Review found only disputed findings (reviewer disagreement). No automated fixes available. How to proceed?",
   header: "Disputed",
   options: [
-    { label: "Fix confirmed findings", description: "Run /team-branch-fix for non-disputed findings only" },
-    { label: "Skip review fixes", description: "Proceed without fixing - note unresolved findings in PR" },
+    { label: "Skip", description: "Proceed without fixes - note disputed findings in PR" },
     { label: "Abort", description: "Stop the implement pipeline, leave branch as-is" }
   ],
   multiSelect: false
 }]
 ```
 
-**If "Fix confirmed findings"**:
+**If "Skip"**: record disputed findings as unresolved, proceed to Post-Fix Cleanup.
 
-```
-Skill(skill: "team-branch-fix", args: "--auto <paste the review report, noting disputed findings should be skipped>")
-```
-
-After fix completes, proceed to Post-Fix Cleanup. Record disputed findings
-as unresolved in the review outcome.
-
-**If "Skip review fixes"**:
-
-Record all findings as unresolved in the review outcome. Proceed to the next
-phase with a note:
-
-```
-Review outcome: MANUAL REVIEW REQUIRED (fixes skipped by user)
-Unresolved findings: N critical/high (disputed)
-```
-
-**If "Abort"**:
-
-Stop the implement pipeline. Leave the branch as-is. Report:
+**If "Abort"**: stop the implement pipeline. Leave the branch as-is. Report:
 
 > "Pipeline aborted at review stage. Branch `feat/<BRANCH_NAME>` remains in
 > the worktree with all implementation commits intact."
+
+**If actionable_count > 0** (any outcome label):
+
+Invoke the fix pipeline. The invocation mode depends on the caller:
+
+- **From /implement** (autonomous): pass `--auto` to skip the interactive
+  finding interview. The fix skill will auto-select all actionable findings
+  and skip disputed ones.
+
+  ```
+  Skill(skill: "team-branch-fix", args: "--auto <paste the review report>")
+  ```
+
+- **Standalone** (interactive): no `--auto` flag. The fix skill presents
+  each finding to the user for include/exclude.
+
+  ```
+  Skill(skill: "team-branch-fix", args: "<paste the review report>")
+  ```
+
+The fix skill handles:
+- Finding selection (auto or interactive)
+- Fixer agent spawning
+- Codex validation
+- Commit strategy (fixup/single/multiple)
+
+If the outcome is MANUAL REVIEW REQUIRED with mixed findings (both actionable
+and disputed), present disputed findings to the user before invoking fixes:
+
+> "Review found disputed findings alongside actionable ones. Disputed findings
+> will be skipped by the fix pipeline. Actionable findings will be fixed."
+
+After /team-branch-fix completes, proceed to Post-Fix Cleanup.
+
+### Error Handling
+
+| Scenario | Recovery |
+|----------|----------|
+| /team-branch-fix returns "No fixes to apply" | Proceed to Post-Fix Cleanup normally (auto-mode skipped all disputed) |
+| Fix verification fails under APPROVED | Record failure in review outcome, proceed with warning |
+| MANUAL REVIEW REQUIRED with no actionable findings | Skip fix pipeline, record disputed findings for PR |
 
 ## Post-Fix Cleanup
 
@@ -190,11 +207,8 @@ Compile the review outcome for use in the PR description:
 
 ```
 Review outcome: [APPROVED | NEEDS REVISION (fixed) | MANUAL REVIEW REQUIRED]
-Total findings: N
-Fixed: N
-Skipped: N
-Deferred: N
-Unresolved: N (if any critical findings remain)
+Fixes: [applied | partially applied | skipped | none needed]
+Remaining: [any critical findings that remain, or "none"]
 ```
 
 This record is passed to the PR description generation phase.
