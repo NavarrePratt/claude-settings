@@ -280,19 +280,80 @@ This record is passed to the PR description generation phase.
 
 ## Post-Fix Squash
 
-After the fix pass completes and any cleanup commits are made, fix commits
-should be squashed into the original commits they fix. The PR should show
-clean history, not "add feature X" followed by "fix review finding in X."
+After the fix pass completes, the PR should show clean history - not "add
+feature X" followed by "fix review finding in X."
 
-**Approaches** (lead chooses based on complexity):
+### When squashing is already handled
 
-- **git rebase with fixup**: for simple cases where each fix maps to a clear
-  parent commit. Use `git rebase --autosquash` with fixup commits, or manual
-  rebase commands (NOT `git rebase -i` which requires interactive input).
-- **/clean-copy rewrite**: if the commit history is messy after fixes, use
-  /clean-copy to rewrite the branch with clean narrative history.
+The /team-branch-fix skill offers a "Fixup into original commits" commit
+strategy. When selected, the fix skill:
 
-Skip squashing if the fix pass made no commits or only trivial changes.
+1. Creates fixup commits: `git commit --fixup=<target-commit-hash>`
+2. Runs autosquash: `GIT_SEQUENCE_EDITOR=true git rebase -i --autosquash <BASE_REF>`
+
+If the fix skill used this strategy and autosquash succeeded, fix commits
+are already folded into their parent commits. The lead can skip this section.
+
+### When the lead must squash manually
+
+There are two distinct scenarios requiring manual squash, each with its
+own approach.
+
+**Scenario A - Uncommitted post-fix changes need folding in**
+
+This applies when:
+- Post-fix cleanup in Step 1 above produced uncommitted changes
+- Autosquash failed during the fix pass and left uncommitted work behind
+- The lead made manual tweaks after the fix pass
+
+These are changes not yet committed, so the lead can create targeted fixup
+commits and autosquash them into the right parents:
+
+```bash
+# 1. Identify which commit each change targets
+git log --oneline <BASE_REF>..HEAD
+
+# 2. Create fixup commits pointing at their parent commits
+git add <files-for-commit-A>
+git commit --fixup=<target-commit-hash-A>
+git add <files-for-commit-B>
+git commit --fixup=<target-commit-hash-B>
+
+# 3. Squash with autosquash (non-interactive)
+GIT_SEQUENCE_EDITOR=true git rebase -i --autosquash <BASE_REF>
+```
+
+If the rebase fails (conflicts), abort with `git rebase --abort` and fall
+back to Scenario B's approach.
+
+**Scenario B - Fix skill already committed ordinary (non-fixup) commits**
+
+This applies when:
+- The fix skill used "Single fix commit" or "Multiple commits" strategy
+- Autosquash failed during the fix pass and the fix skill fell back to
+  plain commits
+
+In these cases, the branch already contains ordinary commits (not prefixed
+with `fixup!`). The `--autosquash` flag has no effect on ordinary commits -
+it only reorders and marks commits whose messages start with autosquash
+prefixes (`fixup!`, `squash!`, `amend!`). Attempting Scenario A's autosquash
+approach would leave these commits untouched.
+
+Within this workflow, use /clean-copy to rewrite the branch with clean
+narrative history. A manual interactive rebase could also work, but
+/clean-copy is preferred because it rewrites all commits from scratch,
+producing a clean sequence regardless of how the existing commits were
+structured.
+
+**Combined scenario**: If the branch has both ordinary fix commits (Scenario
+B) and additional uncommitted changes (Scenario A), skip straight to
+/clean-copy - it handles everything in one pass.
+
+### Skip squashing when
+
+- The fix pass made no commits
+- The fix skill already squashed via fixup + autosquash
+- Only trivial whitespace or formatting changes remain
 
 ## Iteration Boundary
 
