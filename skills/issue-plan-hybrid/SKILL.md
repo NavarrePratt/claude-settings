@@ -1,6 +1,6 @@
 ---
 name: issue-plan-hybrid
-description: Plan issues by interviewing the user first, then validating with Codex technical review. Use when the user wants to be involved in shaping requirements but also wants AI-powered gap analysis before creating beads. Triggers on "plan with me", "let's think through this", or when both human input and technical review are needed.
+description: Plan issues by interviewing the user first, then validating with Codex technical review. Use when the user wants to be involved in shaping requirements but also wants AI-powered gap analysis before creating beads. Triggers on "plan with me", "let's think through this", "plan and validate", or "plan with codex review".
 ---
 
 # Hybrid Planning (User Interview + Codex Review)
