@@ -41,6 +41,9 @@ mcp-needs-auth-cache.json
 *.local.md
 .claude.json
 
+# Skills symlinked from internal repos (tracked in their source repos)
+skills/ask-o11yops
+
 # Migration skill (temporary, local only)
 skills/bd-to-br-migration/
 
