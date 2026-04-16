@@ -396,26 +396,26 @@ worktree preservation path.
 
 ## Guidelines
 
-- **Wave ordering**: implement earlier waves before later waves
-- **Priority within waves**: lower priority number = implement first
-- **Resume support**: detect already-closed beads and skip them
-- **No duplicate work**: skip in_progress beads to avoid conflicts
-- **User confirmation**: always confirm before starting implementation
-- **No bead IDs in commits**: internal tracking detail, not for git history
-- **No counts in commits**: counts go stale before the commit is pushed
-- **Worktree isolation**: all work happens in .claude/worktrees/implement-*
-- **Review default**: one full review + one fix pass, targeted re-review only for non-trivial fixes
-- **Auto-mode for fixes**: /team-branch-fix receives --auto only when /implement is invoked with --auto
-- **Skill invocation**: invoke review/fix via the Skill() tool
-- **Review is post-implementation**: review runs after all beads, not per-bead
-- **Clean state before review**: all changes must be committed before review
-- **PR description from epic**: summary comes from epic, not bead titles
-- **No bead details in PR descriptions**: no bead IDs, skip reasons, or bookkeeping
-- **No numeric stats in PR descriptions**: no file/line/finding counts
+- **Wave ordering**: implement earlier waves before later waves - dependencies require it and later beads may build on earlier changes
+- **Priority within waves**: lower priority number = implement first - matches user intent for what matters most
+- **Resume support**: detect already-closed beads and skip them - enables picking up where a previous session left off
+- **No duplicate work**: skip in_progress beads to avoid conflicts - another session may be actively working on them
+- **User confirmation**: always confirm before starting implementation - the execution plan may need adjustment based on user context
+- **No bead IDs in commits**: internal tracking detail, not meaningful to git history readers
+- **No counts in commits**: counts go stale before the commit is pushed - the diff shows exactly what changed
+- **Worktree isolation**: all work happens in .claude/worktrees/implement-* - protects the main repo from incomplete changes
+- **Review default**: one full review + one fix pass, targeted re-review only for non-trivial fixes - bounds token cost while catching real issues
+- **Auto-mode for fixes**: /team-branch-fix receives --auto only when /implement is invoked with --auto - user's autonomy preference propagates through the pipeline
+- **Skill invocation**: invoke review/fix via the Skill() tool - skills manage their own context and agent lifecycle
+- **Review is post-implementation**: review runs after all beads, not per-bead - reviewing the complete change catches cross-bead interactions
+- **Clean state before review**: all changes must be committed before review - reviewers need committed diffs, not working tree state
+- **PR description from epic**: summary comes from epic context, not bead titles - the epic captures the why, beads are implementation detail
+- **No bead details in PR descriptions**: no bead IDs, skip reasons, or bookkeeping - PR readers care about the change, not the tracking system
+- **No numeric stats in PR descriptions**: no file/line/finding counts - counts go stale during editing and add no value over the diff itself
 - **Degraded verification**: when review or fix is skipped/failed, the PR description must explicitly note the degraded verification state so reviewers know
-- **Push requires approval**: never push without explicit user confirmation
-- **PR creation requires approval**: never create PR without confirmation
-- **Iterative PR editing**: allow user to refine description before saving
+- **Push requires approval**: never push without explicit user confirmation - remote operations are irreversible and affect shared state
+- **PR creation requires approval**: never create PR without confirmation - PRs are visible to the team and trigger notifications
+- **Iterative PR editing**: allow user to refine description before saving - generated descriptions benefit from human judgment on tone and emphasis
 - **Epic status resolution**: auto-close the epic when all beads are done, update notes on partial completion. Best-effort - never block handoff on a br failure
 
 $ARGUMENTS

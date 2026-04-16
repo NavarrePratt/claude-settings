@@ -97,23 +97,45 @@ git status --porcelain
 ## Step 6: Create Artifact Directory and Determine Implementation Mode
 
 Create the artifact directory for state files, subagent summaries, and PR
-descriptions. Use **REPO_NAME** (computed in Step 1). Verify directory
-ownership before writing to avoid symlink attacks on the predictable `/tmp`
-path:
+descriptions. Use **REPO_NAME** (computed in Step 1).
+
+Set `ARTIFACT_DIR=/tmp/<REPO_NAME>-<EPIC_ID>` and create it safely:
 
 ```bash
-mkdir -p /tmp/<REPO_NAME>-<EPIC_ID>
-chmod 700 /tmp/<REPO_NAME>-<EPIC_ID>
+ARTIFACT_DIR="/tmp/<REPO_NAME>-<EPIC_ID>"
+
+if [ -e "$ARTIFACT_DIR" ] || [ -L "$ARTIFACT_DIR" ]; then
+  # Path already exists - verify it is safe before proceeding
+  if [ -L "$ARTIFACT_DIR" ]; then
+    echo "Error: $ARTIFACT_DIR is a symlink" >&2
+    exit 1
+  fi
+  if [ ! -d "$ARTIFACT_DIR" ]; then
+    echo "Error: $ARTIFACT_DIR exists but is not a directory" >&2
+    exit 1
+  fi
+  if [ ! -O "$ARTIFACT_DIR" ]; then
+    echo "Error: $ARTIFACT_DIR is not owned by current user" >&2
+    exit 1
+  fi
+  chmod 700 "$ARTIFACT_DIR"
+else
+  # Path does not exist - create with restricted permissions in one step
+  mkdir -m 700 "$ARTIFACT_DIR"
+fi
+
+# Final verification
+if [ -L "$ARTIFACT_DIR" ] || [ ! -d "$ARTIFACT_DIR" ] || [ ! -O "$ARTIFACT_DIR" ]; then
+  echo "Error: $ARTIFACT_DIR failed post-creation verification" >&2
+  exit 1
+fi
 ```
 
-After creation, verify the directory is owned by the current user and is not
-a symlink:
-
-```bash
-test -d /tmp/<REPO_NAME>-<EPIC_ID> && test -O /tmp/<REPO_NAME>-<EPIC_ID> && test ! -L /tmp/<REPO_NAME>-<EPIC_ID>
-```
-
-If verification fails, warn and fall back to a directory under the worktree.
+When the path already exists, all safety checks (not a symlink, is a
+directory, owned by current user) run before any mutation. When the
+path does not exist, `mkdir -m 700` creates it with restricted
+permissions in a single invocation. A final verification catches
+anything unexpected. If any check fails, stop and report the error.
 
 The lead agent decides between inline and subagent mode. See
 [bead-implementation.md](bead-implementation.md) for the decision criteria.
