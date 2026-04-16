@@ -81,6 +81,21 @@ timeout parameter. The "10-minute timeout" is aspirational guidance for
 subagent prompt design (telling the agent to be concise), not an enforced
 mechanism. If an agent hangs, the lead agent hangs too.
 
+**Recovery from a hung subagent**: the user can interrupt the session
+(Ctrl+C or equivalent). The interrupted session cannot perform cleanup -
+both the subagent and the lead are terminated, leaving the bead in
+in_progress status. Recovery happens in the next session or via manual
+intervention:
+
+```bash
+# Run in the next session or manually from a terminal:
+br update <BEAD_ID> --status open --notes "SKIPPED: subagent appeared hung, user interrupted previous session"
+```
+
+The `br prime` startup command will surface in_progress beads, making
+them visible for recovery. The bead remains available for a future
+session to pick up.
+
 Template variables to substitute in templates/bead-prompt.md:
 - `BEAD_ID` - the bead identifier
 - `BEAD_TITLE` - short title from bead
@@ -177,6 +192,29 @@ reasonable token budgets:
 This keeps total PRIOR_SUMMARIES size roughly proportional to two waves of
 work rather than the entire epic history.
 
+**Example**: An epic has three waves. When spawning a bead in Wave 3:
+
+```
+PRIOR_SUMMARIES for Wave 3 bead:
+
+--- Wave 2 (full summary) ---
+## bd-ccc: Add validation middleware
+Files changed: src/middleware/validate.ts, src/routes/api.ts
+Added request validation middleware using zod schemas. Wired into
+the API router for all POST endpoints.
+
+--- Wave 1 (file list only) ---
+## bd-aaa
+Files changed: src/models/user.ts, src/db/migrations/003_add_email.sql
+## bd-bbb
+Files changed: src/config/defaults.ts
+```
+
+Wave 2 gets full summaries (narrative + files) because its changes are
+recent enough to matter for implementation decisions. Wave 1 is reduced
+to file lists - enough to avoid path conflicts without burning tokens
+on stale narrative.
+
 ## Post-Wave Verification
 
 After all beads in a wave complete and BEFORE committing, the lead runs
@@ -246,7 +284,8 @@ Otherwise leave it for the user to review.
 | Scenario | Recovery |
 |----------|----------|
 | br update fails (bead already claimed) | Warn user, skip bead |
-| Subagent crashes or times out | Reset bead to open, record as skipped |
+| Subagent crashes (control returns to lead) | Lead resets bead to open, records as skipped |
+| Subagent appears hung (no progress) | User interrupts session (Ctrl+C); bead left in_progress - next session or manual `br update` resets to open |
 | Verification command not found | Skip that check, warn in output |
 | All beads in a wave skipped | Log warning, proceed to next wave |
 | Git conflicts in worktree | Stop execution, report to user |
