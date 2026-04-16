@@ -4,8 +4,7 @@ description: >
   Implement an epic's beads in a worktree with logical commits, multi-agent
   review, fix pipeline, and PR description generation. Use when you want to
   implement this epic, burn down the beads, execute the plan, or start working
-  on an epic. Replaces the manual atari-start -> review -> fix -> clean-copy
-  -> PR workflow.
+  on an epic.
 argument-hint: "<epic-id> [branch-name] [--auto]"
 ---
 
