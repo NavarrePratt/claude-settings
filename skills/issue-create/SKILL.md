@@ -1,6 +1,6 @@
 ---
 name: issue-create
-description: Quickly create a single issue from conversation context. Lightweight alternative to issue-plan for capturing one piece of work without full planning.
+description: Quickly create a single issue from conversation context. Use when you want to create a bead, file an issue, track this as a bead, make a ticket for something, or capture a work item. Lightweight alternative to issue-plan for one piece of work without full planning.
 ---
 
 # Quick Bead Creation
@@ -128,18 +128,40 @@ Create a bead (issue) using the br CLI. Here is everything you need:
    br update <new-bead-id> --status open
    ```
 
-5. **Return a summary** in this exact format:
+5. **Return a summary** in this format:
    Created: <bead-id>
    Title: <title>
    Priority: P<n>
    Status: open
    Description: <2-3 sentence summary>
    Linked to epic: <epic-id>
+
+6. **Verify creation** - Run `br show <new-bead-id> --json` and confirm the
+   title matches what was intended and the description is not truncated
+   (heredoc edge cases can silently corrupt long descriptions). If the
+   description appears truncated or the title does not match, add a warning
+   line to the summary: `Warning: bead may have been created with truncated description`
 ```
 
 ### Step 4: Report Result
 
 When the subagent returns, relay its summary to the user. If the bead description is short, show the full description instead of a summary.
+
+---
+
+## Example
+
+**Conversation context:**
+> User: "The br CLI panics when you pass an empty string to --title. This is
+> blocking my workflow - I hit it twice today. The create command should
+> validate the title before writing to the database."
+
+**Resulting bead:**
+- Title: `Validate title is non-empty in br create`
+- Priority: P1 (user explicitly said "blocking my workflow")
+- Description includes: reproduction steps, relevant file (`cli/commands/create.rs`),
+  acceptance criteria (empty title returns error instead of panicking),
+  verification commands (`cargo test`, `cargo clippy`)
 
 ---
 

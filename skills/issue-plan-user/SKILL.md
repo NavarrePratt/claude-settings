@@ -1,6 +1,6 @@
 ---
 name: issue-plan-user
-description: Plan issues by interviewing the user with probing questions - no AI review, purely human-driven planning. Best when the user has strong opinions about implementation, wants full control over requirements, or when the domain knowledge lives with the user rather than in the codebase. Use for subjective decisions, product direction, or when Codex review would add noise rather than value.
+description: Plan issues by interviewing the user with probing questions - no AI review, purely human-driven planning. Use when you want to work together to create beads, be interviewed about requirements, or plan without codex. Best when the user has strong opinions, wants full control, or when domain knowledge lives with the user rather than in the codebase. Use for subjective decisions, product direction, or when Codex review would add noise rather than value.
 ---
 
 # User Interview Planning
