@@ -4,7 +4,7 @@
     "CLAUDE_BASH_MAINTAIN_PROJECT_WORKING_DIR": "true",
     "CLAUDE_CODE_NO_FLICKER": "1",
     "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1",
-    "ENABLE_TOOL_SEARCH": "auto",
+    "ENABLE_TOOL_SEARCH": "false",
     "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "40"
   },
   "includeCoAuthoredBy": false,
