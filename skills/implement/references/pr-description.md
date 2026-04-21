@@ -29,6 +29,79 @@ placeholders:
 | REVIEW_SUMMARY | One-line or short block summarizing the review outcome from Phase 4. |
 | VERIFICATION_RESULTS | List of verification commands run and their results (PASS/FAIL). |
 
+## PR Title vs Body
+
+The PR body renders from `templates/pr-body.md` using the placeholder
+substitution above. The PR title is derived separately and passed to
+`gh pr create --title` explicitly - never embedded in the body or left for
+GitHub to infer. This avoids Conventional-Commits validators rejecting an
+auto-inferred title that lacks a required prefix.
+
+## Generating the PR Title (PR_TITLE)
+
+### Constraints
+
+- ≤70 characters on the final serialized title (including any prefix/scope)
+- No trailing period
+- Imperative mood, user-visible outcome first
+- No bead IDs, no internal codenames (existing project-wide rule)
+
+### Conventional Commits
+
+Use Conventional Commits for the PR title only when the repo clearly
+expects them. The type list and the "match recent commits" detection
+rule are already documented in
+[git-commit/SKILL.md](../../git-commit/SKILL.md) ("Commit Message
+Format Detection"); apply the same judgment here, with two
+PR-title-specific adjustments:
+
+- **Sample the base branch, not the current branch.** A feature
+  branch may not yet follow the repo's convention. Use:
+
+  ```bash
+  HISTORY_REF="$BASE_REF"
+  git show-ref --verify --quiet "refs/remotes/origin/$BASE_REF" && HISTORY_REF="origin/$BASE_REF"
+  git log --format=%s --no-merges -n 30 "$HISTORY_REF"
+  ```
+
+- **Look inside `.github/workflows/`** for direct evidence that the
+  PR title itself is validated. A bare `commitlint` invocation is
+  commit-message linting, not PR-title validation. If a PR-title
+  validator is configured and its rules narrow the format beyond
+  the standard types (required scope, restricted type list, lower
+  length cap, etc.), ask the user for the exact required shape
+  rather than guessing.
+
+Type list uses the git-commit skill's set plus `revert` (for PRs that
+revert a prior commit). If the signal is mixed - no workflow
+validator, base-branch commits don't clearly follow CC - ask the user
+instead of guessing.
+
+### Subject Writing Guidance
+
+- Imperative mood ("add", "fix", "surface") - not past tense or gerund
+- User-visible outcome first - lead with what the PR does for a reader
+- No trailing period
+- Strip nothing substantive: RFC/AIP/standards references are part of the
+  subject, not tracking tokens
+
+Examples:
+
+- Yes: `feat: surface AIP-193 error details on SDK exceptions`
+- No: `feat: AIP-193 Error Details in SDK Exceptions.`
+
+### Normalization
+
+Applied before saving to `pr-title.txt`:
+
+- Collapse internal whitespace; trim outer whitespace
+- Enforce a single logical line (no embedded newlines)
+- 70-char limit on the final serialized title, including any prefix/scope
+- Strip any trailing period
+- Preserve substantive subject content (do NOT strip RFC/AIP/standards
+  references; the project-wide rule against bead IDs and internal codenames
+  covers what should be removed)
+
 ## Generating the Summary (CHANGES_SUMMARY)
 
 The summary explains **why** this PR exists. Derive it from the epic
@@ -138,9 +211,21 @@ No explicit verification commands defined in bead descriptions.
 
 ## Output
 
-Save the rendered template to `/tmp/<REPO_NAME>-<EPIC_ID>/pr-description.md`.
-The directory is created during Phase 2 (worktree setup).
+Two artifacts, saved side by side in the directory created during Phase 2
+(worktree setup):
 
-Present the full rendered description to the user in the conversation for
-review. Allow iterative edits via conversation ("change the summary to...",
-"add a note about X", etc.) and re-save after each edit.
+- `/tmp/<REPO_NAME>-<EPIC_ID>/pr-description.md` - rendered body from
+  `templates/pr-body.md` with placeholders substituted
+- `/tmp/<REPO_NAME>-<EPIC_ID>/pr-title.txt` - derived title as a single
+  line of plain text, already normalized per the rules above
+
+Present both the title and the full body to the user in the conversation
+for review. Allow iterative edits via conversation ("change the summary
+to...", "use `fix:` not `feat:`", "add a note about X", etc.) and re-save
+the affected file after each edit.
+
+Explicit approval gate: Phase 6 Push-and-create-PR must not run until the
+user has approved the full PR draft (both title and body). Approvals can
+arrive across separate messages in an iterative edit flow; track both
+artifacts as approved independently, then proceed only when both are
+approved and the current content is what was approved.
