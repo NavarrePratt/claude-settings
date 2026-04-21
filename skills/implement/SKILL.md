@@ -256,7 +256,22 @@ Collect from prior phases: epic context, review outcome, verification results.
 git log --oneline <BASE_REF>..HEAD
 ```
 
-**Step 2: Generate Description**
+**Step 2: Derive PR Title**
+
+Follow [pr-description.md "Generating the PR Title"](references/pr-description.md)
+to derive the title:
+
+1. Detect Conventional Commits - workflow grep first, then git log
+   inference, ask the user when evidence falls in the ambiguous band.
+   Exact thresholds and the strictness escape hatch live in the reference.
+2. Determine CHANGE_KIND for the PR as a whole. Ask the user via
+   AskUserQuestion when multiple kinds are equally plausible.
+3. Map CHANGE_KIND to a prefix (when Conventional Commits applies) and
+   compose an imperative ≤70-char subject with no trailing period.
+4. Apply the normalization rules from the reference.
+5. Save the final one-line title to `/tmp/<REPO_NAME>-<EPIC_ID>/pr-title.txt`.
+
+**Step 3: Generate Body**
 
 Read templates/pr-body.md and substitute placeholders per
 references/pr-description.md:
@@ -266,10 +281,18 @@ references/pr-description.md:
 - **REVIEW_SUMMARY**: qualitative review outcome (no numeric counts).
 - **VERIFICATION_RESULTS**: commands run with PASS/FAIL results.
 
-**Step 3: Save and Present**
+**Step 4: Save and Present**
 
-Save to `/tmp/<REPO_NAME>-<EPIC_ID>/pr-description.md`.
-Present to user for iterative editing.
+Save the body to `/tmp/<REPO_NAME>-<EPIC_ID>/pr-description.md` and keep
+the title at `/tmp/<REPO_NAME>-<EPIC_ID>/pr-title.txt` from Step 2.
+Present both to the user and allow iterative editing; re-save the affected
+file after each edit.
+
+Do not allow Phase 6 Push-and-create-PR until the user has approved the
+full PR draft (both title and body). Approvals can arrive across separate
+messages in an iterative edit flow; track both artifacts as approved
+independently, then proceed only when both are approved and the current
+content is what was approved.
 
 ---
 
@@ -334,6 +357,7 @@ Worktree: <WORKTREE_PATH>
 Beads: implemented and closed (list skipped beads if any)
 Commits: <git log --oneline <BASE_REF>..HEAD>
 Review: <review outcome summary>
+PR title: <contents of /tmp/<REPO_NAME>-<EPIC_ID>/pr-title.txt>
 PR description: /tmp/<REPO_NAME>-<EPIC_ID>/pr-description.md
 ```
 
@@ -358,8 +382,22 @@ questions: [{
 **Step 3: Execute Choice**
 
 **Push and create PR**: requires explicit user confirmation per CLAUDE.md.
-Show commits, confirm, then push and create PR with the body file from
-`/tmp/<REPO_NAME>-<EPIC_ID>/pr-description.md`.
+Show commits and the derived title, confirm, then push and create the PR
+with both title and body passed explicitly (see
+[pr-description.md "Generating the PR Title"](references/pr-description.md)):
+
+```bash
+ARTIFACT_DIR="/tmp/<REPO_NAME>-<EPIC_ID>"
+test -s "$ARTIFACT_DIR/pr-title.txt" || { echo "Error: missing PR title" >&2; exit 1; }
+test -s "$ARTIFACT_DIR/pr-description.md" || { echo "Error: missing PR body" >&2; exit 1; }
+awk 'NR>1 || length($0)>70 {exit 1}' "$ARTIFACT_DIR/pr-title.txt" \
+  || { echo "Error: pr-title.txt is multi-line or >70 chars" >&2; exit 1; }
+
+gh pr create \
+  --base "$BASE_REF" \
+  --title "$(cat "$ARTIFACT_DIR/pr-title.txt")" \
+  --body-file "$ARTIFACT_DIR/pr-description.md"
+```
 
 **Push only**: confirm, push with `-u`.
 
