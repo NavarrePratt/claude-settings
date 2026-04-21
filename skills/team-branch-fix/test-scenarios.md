@@ -86,6 +86,16 @@ with commits ahead of main.
 - **Found by**: config-reviewer
 - **Exercises**: Scenario 4 (Med/Low batch)
 
+### Finding 9: String comparison case sensitivity (Disputed, Low)
+- **File**: pkg/auth/handler.go:120
+- **Severity**: Low
+- **Category**: correctness
+- **Description**: Username comparison is case-sensitive but login form lowercases input
+- **Suggested fix**: Normalize both sides before comparison with strings.EqualFold
+- **Codex status**: Disputed - Codex says the API contract documents case-sensitive usernames and changing this would break existing integrations
+- **Found by**: correctness-reviewer
+- **Exercises**: Scenario 10 (disputed Med/Low - MUST NOT be silently batch-approved in Step 3)
+
 ---
 
 ## Expected Behavior Traces
@@ -95,7 +105,7 @@ with commits ahead of main.
 - Verify clean working tree, commits ahead of main
 
 ### Phase 1: Parse findings
-- 8 findings parsed: f-1 through f-8
+- 9 findings parsed: f-1 through f-9
 - Scope: all `line` scoped
 
 ### Phase 1.5: Canonicalization (Scenario 6)
@@ -103,14 +113,29 @@ with commits ahead of main.
 - Grouped as g-1 (canonical: f-2, more specific fix) with source_finding_ids: [f-2, f-3]
 - found_by merged: [architecture-reviewer, api-reviewer]
 - severity: Critical (highest of Critical, High)
-- **Expect**: "Parsed 8 findings, deduplicated to 7 canonical findings (1 duplicate merged)."
+- **Expect**: "Parsed 9 findings, deduplicated to 8 canonical findings (1 duplicate merged)."
 
 ### Phase 2 Step 0: Session default (Scenario 8)
 - Branch: `fix/auth-improvements` -> contains `fix/` -> suggests `minimal_patch`
 - **Expect**: AskUserQuestion: "Inferred default: minimal_patch based on branch name fix/..."
 - User keeps or overrides
 
-### Phase 2 Step 1: Critical & High findings
+### Phase 2 Step 0.5: Disputed finding triage (NEW)
+- Canonical findings with `codex_status == "Disputed"`: [f-6, f-9]
+- **Expect**: assistant text announcing the count of disputed findings
+- **Expect**: AskUserQuestion: "2 findings were disputed by Codex. How do you want to handle them?"
+  - Skip all disputed (Recommended)
+  - Review each individually
+  - Trust Claude on all
+  - Trust Codex on all
+- **Branch A - "Skip all disputed"**: f-6 gets `decision.disposition = "skip"`, does not appear in Step 2
+- **Branch B - "Review each individually"**: f-6 flows into Step 2 with full stance resolution
+- **Branch C - "Trust Claude on all"**: f-6 gets `decision.stance = "claude"`, Step 2 skips stance question
+- **Branch D - "Trust Codex on all"**: f-6 gets `decision.stance = "codex"`, Step 2 skips stance question
+
+### Phase 2 Step 1: Confirmed Critical & High findings
+
+Scope: Critical/High findings where codex_status != "Disputed". Excludes f-6 (disputed, handled by Step 0.5 and Step 2).
 
 **g-1 (Error handling, Critical - was f-2+f-3)** - Scenario 2
 - Read ~50 lines of pkg/api/server.go around line 110
@@ -121,12 +146,6 @@ with commits ahead of main.
 - **Expect**: AskUserQuestion with markdown previews, "Validate with Codex", "Skip"
 - If user picks "Validate with Codex" (Scenario 3): Codex called, approaches re-presented with assessments, no Validate option second time
 
-**f-6 (Race condition, Critical, DISPUTED)** - Scenario 5
-- **Expect**: AskUserQuestion for stance: Trust Claude / Trust Codex / More info / Skip
-- User picks stance -> record decision.stance
-- Then classify complexity: mutex vs sync.Map (+1), introduces sync pattern (+1) = score 2 = COMPLEX
-- **Expect**: Generate 2 approaches within chosen stance
-
 **f-1 (Nil check, High, Confirmed)** - Scenario 1
 - Read ~50 lines of pkg/auth/handler.go around line 42
 - Score: single function (0), one obvious fix (0), no new patterns (0), no API change (0), 2 lines (0) = score 0 = TRIVIAL
@@ -134,7 +153,26 @@ with commits ahead of main.
 - **Expect**: NO approach options presented
 - **Expect**: Fixer receives "Use suggested fix"
 
-### Phase 2 Step 3: Medium & Low findings (Scenario 4)
+### Phase 2 Step 2: Disputed findings (Scenario 5)
+
+Scope: disputed findings with `decision.disposition != "skip"`. Skipped if Step 0.5 picked "Skip all disputed".
+
+**f-6 (Race condition, Critical, DISPUTED)**
+- Only runs if Step 0.5 user selection was "Review each individually", "Trust Claude on all", or "Trust Codex on all"
+- **If stance NOT pre-resolved** (user picked "Review each individually"):
+  - **Expect**: AskUserQuestion: "⚠ DISPUTED: Race condition in session cache in pkg/auth/cache.go:65. Claude: [needs mutex]. Codex: [single-goroutine, no mutex needed]. Whose assessment?"
+  - Header MUST be "Disputed"
+  - Options: Trust Claude / Trust Codex / More info / Skip
+  - User picks stance -> record `decision.stance`
+- **If stance pre-resolved** (user picked "Trust Claude on all" or "Trust Codex on all" in Step 0.5):
+  - **Expect**: assistant text: "⚠ DISPUTED - using [Claude/Codex] stance from bulk triage"
+  - Skip stance question, proceed to complexity classification
+- Then classify complexity: mutex vs sync.Map (+1), introduces sync pattern (+1) = score 2 = COMPLEX
+- **Expect**: Generate 2 approaches within chosen stance, with "⚠ DISPUTED" leading the question text
+
+### Phase 2 Step 3: Confirmed Medium & Low findings (Scenario 4)
+
+Scope: Med/Low findings where codex_status != "Disputed". Batch-approvals MUST NOT include any disputed findings.
 
 **Batch: correctness [f-5]**
 - AskUserQuestion: "1 medium finding in correctness. How to handle?"

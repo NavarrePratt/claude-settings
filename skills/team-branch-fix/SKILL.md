@@ -203,9 +203,40 @@ Call AskUserQuestion tool with:
 
 The session default determines which approach is listed first (recommended position) when generating approaches for complex findings.
 
-**Step 1: Critical & High findings**
+**Step 0.5: Disputed finding triage**
 
-For each confirmed Critical or High finding:
+Before stepping through findings individually, triage Codex-disputed findings in bulk. Disputed findings are a strong signal that reviewers disagreed - they deserve explicit handling, not one-at-a-time erosion of user attention deep in the interview.
+
+Collect every canonical finding where `codex_status == "Disputed"`, regardless of severity. If zero disputed findings exist, skip this step entirely.
+
+If disputed findings exist, announce the count to the user in assistant text (e.g., "3 of 12 findings were disputed by Codex"), then call AskUserQuestion:
+
+**Auto-mode (AUTO_MODE = true):** Auto-select "Skip all disputed". Disputed findings require human judgment that cannot be safely automated. For each disputed finding, log to Auto-Mode Decision Log: Phase="Step 0.5", Finding="[finding_id]: [title]", Decision="Skip", Reason="auto-mode: disputed finding, requires human judgment". Skip the AskUserQuestion call below.
+
+```
+Call AskUserQuestion tool with:
+  questions: [{
+    question: "N findings were disputed by Codex. How do you want to handle them?",
+    header: "Disputed",
+    options: [
+      { label: "Skip all disputed (Recommended)", description: "Mark all N as skipped - reviewers disagreed, fix nothing" },
+      { label: "Review each individually", description: "Walk through each disputed finding with full stance resolution" },
+      { label: "Trust Claude on all", description: "Apply Claude's assessment to all N disputed findings, then pick fix/skip per finding" },
+      { label: "Trust Codex on all", description: "Apply Codex's assessment to all N disputed findings, then pick fix/skip per finding" }
+    ],
+    multiSelect: false
+  }]
+```
+
+Record the bulk decision per disputed finding based on user selection:
+- **"Skip all disputed"**: set `decision.disposition = "skip"`. These findings are done - they are excluded from Steps 1, 2, and 3.
+- **"Review each individually"**: leave `decision` untouched. These findings flow into Step 2 for full stance resolution.
+- **"Trust Claude on all"**: set `decision.stance = "claude"` for each. These findings flow into Step 2 but skip the stance-resolution question.
+- **"Trust Codex on all"**: set `decision.stance = "codex"` for each. Same as above but with Codex's position.
+
+**Step 1: Confirmed Critical & High findings**
+
+For each Critical or High finding where `codex_status != "Disputed"` (disputed findings are routed to Step 0.5 and Step 2):
 
 1. **Classify complexity**: Read ~50 lines of code around the finding and score against the [complexity rubric](references/complexity-rubric.md). Score >= 2 = complex. If uncertain, classify complex. *(Fallback if reference missing: +1 each for multi-function scope, multiple valid approaches, new patterns required, public API impact, non-obvious fix. Threshold: >= 2.)*
 
@@ -262,18 +293,22 @@ Call AskUserQuestion tool with:
   }]
 ```
 
-**Step 2: Disputed Critical & High findings**
+**Step 2: Disputed findings (all severities)**
 
-For findings where Claude and Codex disagreed, resolve stance first, then handle complexity.
+Scope: every canonical finding where `codex_status == "Disputed"` AND `decision.disposition != "skip"` (findings skipped via Step 0.5 bulk triage are excluded). This step handles Critical, High, Medium, and Low disputed findings uniformly - disputes are treated as a first-class signal regardless of severity.
 
-**Auto-mode (AUTO_MODE = true):** Auto-select "Skip" for all disputed findings. Disputed findings mean reviewers disagree, and resolving that disagreement requires human judgment that cannot be safely automated. Log to Auto-Mode Decision Log: Phase="Step 2", Finding="[finding_id]: [title]", Decision="Skip", Reason="auto-mode: disputed finding, requires human judgment". Skip the AskUserQuestion call below and skip the complexity classification that follows.
+**Auto-mode (AUTO_MODE = true):** Auto-mode handled all disputed findings in Step 0.5. This step is a no-op under auto-mode.
 
-**Stance resolution**: Call AskUserQuestion to pick whose assessment to trust:
+**Stance resolution**: For each in-scope disputed finding, check whether `decision.stance` was already set by Step 0.5 bulk triage:
+
+- **If stance already set** (user picked "Trust Claude on all" or "Trust Codex on all" in Step 0.5): skip the stance question entirely. Announce in assistant text (e.g., "⚠ DISPUTED - using [Claude/Codex] stance from bulk triage"). Proceed directly to complexity classification.
+
+- **If stance NOT set** (user picked "Review each individually" in Step 0.5): call AskUserQuestion to resolve stance. The question text MUST lead with "⚠ DISPUTED" and the header MUST be "Disputed" so the signal is impossible to miss:
 
 ```
 Call AskUserQuestion tool with:
   questions: [{
-    question: "[Finding title] in [file:line] - DISPUTED. Claude: [issue]. Codex: [counter]. Whose assessment?",
+    question: "⚠ DISPUTED: [Finding title] in [file:line]. Claude: [issue]. Codex: [counter]. Whose assessment?",
     header: "Disputed",
     options: [
       { label: "Trust Claude", description: "[Claude's position in one line]" },
@@ -291,9 +326,11 @@ After stance is resolved, record `decision.stance` (`claude` or `codex`).
 
 **Then classify complexity** using the winning stance's suggested fix:
 - **If trivial**: Use the stance winner's suggested fix directly. Set `decision.disposition: "fix"`.
-- **If complex**: Generate 2 approaches within the chosen stance (approaches should align with the assessment the user trusted). Present via AskUserQuestion with markdown previews, same pattern as Step 1 complex flow.
+- **If complex**: Generate 2 approaches within the chosen stance (approaches should align with the assessment the user trusted). Present via AskUserQuestion with markdown previews, same pattern as Step 1 complex flow. The question text MUST lead with "⚠ DISPUTED" so the user knows this finding came from a disagreement even while picking an approach.
 
-**Step 3: Medium & Low findings**
+**Step 3: Confirmed Medium & Low findings**
+
+Scope: every Medium or Low finding where `codex_status != "Disputed"`. Disputed Med/Low findings were routed through Step 0.5 (for bulk triage) and Step 2 (for individual review), so they are NEVER batch-approved here. This is the fix for the biggest dispute-visibility hole: confirmed Med/Low can safely batch; disputed Med/Low cannot.
 
 **Auto-mode (AUTO_MODE = true):** Auto-select "Fix all (Recommended)" for every Med/Low category. The Phase 7 verification gate catches regressions from aggressive fixes. Log to Auto-Mode Decision Log: Phase="Step 3", Finding="[category] (N findings)", Decision="Fix all", Reason="auto-mode: batch approve Med/Low". Skip the AskUserQuestion call below.
 
@@ -338,8 +375,8 @@ Auto-Mode Decision Log
 | Phase | Finding | Decision | Reason |
 |-------|---------|----------|--------|
 | Step 0 | - | Keep [style] | auto-mode: used inferred default |
+| Step 0.5 | f-3: [title] | Skip | auto-mode: disputed finding, requires human judgment |
 | Step 1 | f-1: [title] | Fix | auto-mode: trivial confirmed finding |
-| Step 2 | f-3: [title] | Skip | auto-mode: disputed finding, requires human judgment |
 | Step 3 | [category] (N) | Fix all | auto-mode: batch approve Med/Low |
 | ... | ... | ... | ... |
 ```
@@ -722,8 +759,8 @@ Present the summary to the user:
 
 ### Auto-Mode Summary (only when AUTO_MODE = true)
 - Session default: [style]
+- Disputed findings auto-skipped (Step 0.5): N
 - Confirmed findings auto-approved: N
-- Disputed findings auto-skipped: N
 - Med/Low findings batch-approved: N
 - Blocked findings auto-skipped: N
 - Commit strategy: [what was actually used - fixup or single commit fallback]
@@ -858,6 +895,7 @@ Report back what commits were created.
 - **Bounded iteration**: Phase 7.5 allows at most 1 follow-up round. If a follow-up fixer also blocks, the finding becomes unresolved. No infinite loops.
 - **Verify after all fixes**: Phase 7 verification runs only after all fixers (original + follow-up) have completed.
 - **Auto-mode safety**: --auto skips disputed and blocked findings rather than guessing. Human judgment is required for disagreements.
+- **Dispute visibility is first-class**: Disputed findings (codex_status = "Disputed") are triaged in bulk at Phase 2 Step 0.5 and always flagged with "⚠ DISPUTED" when reviewed individually. Disputed Med/Low findings MUST NOT be silently batch-approved in Step 3.
 - **Auto-mode auditability**: Every auto-decision is logged to the Auto-Mode Decision Log table, printed in full before execution begins.
 - **Auto-mode parsing**: --auto must be the first token in ARGUMENTS. If it appears elsewhere, it is part of the report text.
 - **Auto-mode backward compatibility**: When --auto is absent, all behavior is identical to the non-auto flow. No code paths change.
