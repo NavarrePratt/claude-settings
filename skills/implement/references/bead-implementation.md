@@ -22,7 +22,7 @@ bead count threshold.
 ### Step 1: Claim
 
 ```bash
-br update <BEAD_ID> --status in_progress --json
+br --db "$MAIN_REPO_BEADS_DB" update <BEAD_ID> --status in_progress --json
 ```
 
 This prevents duplicate work if another session picks up the same bead.
@@ -30,7 +30,7 @@ This prevents duplicate work if another session picks up the same bead.
 ### Step 2: Load Context
 
 ```bash
-br show <BEAD_ID> --json
+br --db "$MAIN_REPO_BEADS_DB" show <BEAD_ID> --json
 ```
 
 Extract from the JSON:
@@ -87,13 +87,21 @@ both the subagent and the lead are terminated, leaving the bead in
 in_progress status. Recovery happens in the next session or via manual
 intervention:
 
+From the main repo (plain `br` resolves the beads DB automatically):
+
 ```bash
-# Run in the next session or manually from a terminal:
 br update <BEAD_ID> --status open --notes "SKIPPED: subagent appeared hung, user interrupted previous session"
 ```
 
-The `br prime` startup command will surface in_progress beads, making
-them visible for recovery. The bead remains available for a future
+From inside a worktree (pass `--db` to point at the main repo's beads DB):
+
+```bash
+br --db "$MAIN_REPO_BEADS_DB" update <BEAD_ID> --status open --notes "SKIPPED: subagent appeared hung, user interrupted previous session"
+```
+
+Run `br list --status in_progress` to surface beads that were left
+in_progress, including any stuck from a prior hung session. Reset with
+`br update <id> --status open`. The bead remains available for a future
 session to pick up.
 
 Template variables to substitute in templates/bead-prompt.md:
@@ -148,7 +156,7 @@ The lead assesses the error to decide, not a fixed retry count.
 ### Step 5: Close on Success
 
 ```bash
-br close <BEAD_ID> --reason "<brief summary of what was done>"
+br --db "$MAIN_REPO_BEADS_DB" close <BEAD_ID> --reason "<brief summary of what was done>"
 ```
 
 The reason should be concise - the diff captures the what; the reason
@@ -157,7 +165,7 @@ captures the why.
 ### Step 6: Handle Failure
 
 ```bash
-br update <BEAD_ID> --status open --notes "SKIPPED: <what failed and why>"
+br --db "$MAIN_REPO_BEADS_DB" update <BEAD_ID> --status open --notes "SKIPPED: <what failed and why>"
 ```
 
 Record the bead as skipped. Include which verification failed, what was

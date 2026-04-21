@@ -106,3 +106,52 @@ variable instead of hard-coding a branch name.
 
 If neither method produces a result:
 > "Could not detect the default branch. Ensure `refs/remotes/origin/HEAD` is set (run `git remote set-head origin --auto`), or create a local branch named `main`, `master`, or `trunk`."
+
+## Check 8: Derive MAIN_REPO_BEADS_DB
+
+Record the path to the main repo's beads database. Every `br` call made
+after the Phase 2 `cd` into the worktree targets this path via the `--db`
+flag, because `.beads/` is gitignored and does not exist in the worktree.
+
+Derivation must run BEFORE the Phase 2 `cd`, so `git rev-parse --show-toplevel`
+returns the main repo root. Ask `br` itself for the path first, and fall
+back to the default location only if `br where` cannot report it:
+
+```bash
+MAIN_REPO_BEADS_DB="$(br where --json 2>/dev/null | jq -r '.database_path // empty' 2>/dev/null || true)"
+if [ -z "$MAIN_REPO_BEADS_DB" ]; then
+  MAIN_REPO_BEADS_DB="$(git rev-parse --show-toplevel)/.beads/beads.db"
+fi
+```
+
+Reject paths containing shell metacharacters, since the value is rendered
+verbatim into downstream Bash snippets:
+
+```bash
+case "$MAIN_REPO_BEADS_DB" in
+  *[\$\`\"\'\\]*|*$'\n'*)
+    echo "Error: repo path contains shell metacharacters; cannot safely derive MAIN_REPO_BEADS_DB"
+    exit 1
+    ;;
+esac
+```
+
+Verify the database file exists:
+
+```bash
+[ -f "$MAIN_REPO_BEADS_DB" ]
+```
+
+If the file does not exist:
+> "Beads database not found at `$MAIN_REPO_BEADS_DB`. Run `br where` from the repo root to find the actual path (if the workspace uses a non-default database name) or `br init` to create one."
+
+Smoke-test the database with a real read-only `br --db` call so Phase 0
+fails fast instead of failing later at the first bead operation:
+
+```bash
+br --db "$MAIN_REPO_BEADS_DB" list --limit 1 --json >/dev/null 2>&1 || { echo "Error: cannot open beads database at $MAIN_REPO_BEADS_DB"; exit 1; }
+```
+
+Record as **MAIN_REPO_BEADS_DB**. See
+[shared/br-in-worktree.md](../../shared/br-in-worktree.md) for the canonical
+pattern and rationale.
