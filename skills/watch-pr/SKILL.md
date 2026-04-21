@@ -256,12 +256,16 @@ while true; do
     echo "CI_PASSING checks=$new_total"
   fi
 
-  # Reviews (submitted = a review with a state, not just inline comments)
-  new_reviews=$(jq -r '[.reviews[]? | {id,state,author:.author.login}] | tostring' "$LATEST_FILE")
-  old_reviews=$(jq -r '[.reviews[]? | {id,state,author:.author.login}] | tostring' "$STATE_FILE" 2>/dev/null || echo '[]')
+  # Reviews (submitted = a review with a state, not just inline comments).
+  # Filter out PENDING: gh pr view exposes the authenticated user's own
+  # draft review with state=PENDING, and without this filter we'd fire
+  # REVIEW_SUBMITTED every time someone starts typing a review, and then
+  # fire it a second time when PENDING transitions to the real state.
+  new_reviews=$(jq -r '[.reviews[]? | select(.state != "PENDING") | {id,state,author:.author.login}] | tostring' "$LATEST_FILE")
+  old_reviews=$(jq -r '[.reviews[]? | select(.state != "PENDING") | {id,state,author:.author.login}] | tostring' "$STATE_FILE" 2>/dev/null || echo '[]')
   if [ "$new_reviews" != "$old_reviews" ]; then
     added=$(jq -r --argjson old "$old_reviews" \
-      '[.reviews[]? | {id,state,author:.author.login}] as $new
+      '[.reviews[]? | select(.state != "PENDING") | {id,state,author:.author.login}] as $new
        | ($new - $old)[] | "\(.author) \(.state)"' "$LATEST_FILE")
     if [ -n "$added" ]; then
       while IFS= read -r line; do
