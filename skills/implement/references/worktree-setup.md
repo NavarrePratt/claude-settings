@@ -4,16 +4,23 @@ Create and configure an isolated worktree for implementation.
 
 ## Step 1: Compute Branch Name
 
-If **BRANCH_NAME** was provided in `$ARGUMENTS`: use it as-is.
+Determine the raw input: if **BRANCH_NAME** was provided in `$ARGUMENTS`,
+use that value; otherwise use **EPIC_TITLE**.
 
-Otherwise, slugify **EPIC_TITLE**:
+Always slugify the raw input - user-provided BRANCH_NAME is NOT accepted
+as-is. The same slugification rules apply to both the user-provided and
+epic-title-derived cases:
+
 - Convert to lowercase
 - Replace spaces with hyphens
 - Strip characters that are not alphanumeric or hyphens
 - Collapse consecutive hyphens
 - Trim trailing hyphens
 
-Record as **BRANCH_NAME**.
+Record the slugified result as **BRANCH_NAME**. This value flows into
+shell commands (`git branch --list`, `git worktree add`) and heredoc
+bodies below, so slugification is a required input-validation step -
+never pass raw `$ARGUMENTS` through verbatim.
 
 Compute the repository directory name for use in state file paths:
 
@@ -79,14 +86,10 @@ Change to WORKTREE_PATH. All subsequent commands execute inside the worktree.
 
 ## Step 5: Verify Environment
 
-Verify the beads database is accessible:
-
-```bash
-br where
-```
-
-If it fails, the worktree may not share bead configuration. The `BR_HOME`
-environment variable can point br at the main repo's `.beads/` directory.
+All `br` calls from this point forward must use the `--db` flag to target
+the main repo's database. See [../../shared/br-in-worktree.md](../../shared/br-in-worktree.md)
+for the canonical pattern. Phase 0 Check 8 already verified the database
+exists - no re-verification is needed here.
 
 Verify clean state:
 
@@ -101,7 +104,7 @@ as taken. Write a claim note recording the worktree path so a human can
 locate the active session.
 
 ```bash
-br update <EPIC_ID> --status in_progress --notes "$(cat <<EOF
+br --db "$MAIN_REPO_BEADS_DB" update <EPIC_ID> --status in_progress --notes "$(cat <<'EOF'
 CLAIMED: /implement session on branch feat/<BRANCH_NAME>
 Worktree: <WORKTREE_PATH>
 EOF

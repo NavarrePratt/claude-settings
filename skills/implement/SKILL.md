@@ -25,6 +25,7 @@ Load referenced files with the Read tool before executing the relevant phase.
 | [bead-implementation.md](references/bead-implementation.md) | Phase 3 - implementation, verification, and commit strategy |
 | [review-fix-pipeline.md](references/review-fix-pipeline.md) | Phase 4 - review and fix pipeline |
 | [pr-description.md](references/pr-description.md) | Phase 5 - PR description generation |
+| [../shared/br-in-worktree.md](../shared/br-in-worktree.md) | br flag pattern used across all post-cd phases (Phases 2, 3, 6) |
 
 ## Context
 
@@ -54,6 +55,8 @@ Run all checks from the reference file in order, stopping at first failure:
 5. No dependency cycles
 6. Parse optional branch name and `--auto` flag from `$ARGUMENTS`
 7. Discover **BASE_REF** (default branch detection)
+8. Derive **MAIN_REPO_BEADS_DB** (path to main repo's `.beads/beads.db`,
+   used on every post-cd `br` call via `--db`)
 
 Note: the "epic has children" check is deferred to Phase 1. The epic-resolution
 algorithm reports "no children found" as an early exit if the parent-field scan
@@ -103,14 +106,19 @@ lead agent creates or updates tasks - subagents never touch TaskCreate.
 
 Read [worktree-setup.md](references/worktree-setup.md) before executing.
 
+All `br` calls in Phase 2 and every subsequent phase use the `--db` flag to
+target the main repo's database (`MAIN_REPO_BEADS_DB` from Phase 0). The
+worktree has no `.beads/` directory because it is gitignored - see
+[shared/br-in-worktree.md](../shared/br-in-worktree.md) for rationale.
+
 Follow the reference file to:
 
 1. Compute **BRANCH_NAME** (from `$ARGUMENTS` or slugified EPIC_TITLE)
 2. Check for existing worktree (offer reuse or abort)
 3. Create worktree: `git worktree add .claude/worktrees/implement-<BRANCH_NAME> -b feat/<BRANCH_NAME> <BASE_REF>`
 4. Change working directory to **WORKTREE_PATH**
-5. Verify environment (br access, clean state)
-5b. Claim the epic: `br update <EPIC_ID> --status in_progress --notes "CLAIMED: ..."` (see worktree-setup.md Step 5b)
+5. Verify clean state (Phase 0 already proved the beads db exists)
+5b. Claim the epic: `br --db "$MAIN_REPO_BEADS_DB" update <EPIC_ID> --status in_progress --notes "CLAIMED: ..."` (see worktree-setup.md Step 5b)
 6. Decide implementation mode (see bead-implementation.md for criteria)
 
 **State file for context protection**
@@ -133,6 +141,7 @@ worktree-setup.md Step 1).
   "base_ref": "<BASE_REF>",
   "worktree_path": "<WORKTREE_PATH>",
   "repo_name": "<REPO_NAME>",
+  "main_repo_beads_db": "<MAIN_REPO_BEADS_DB>",
   "auto_mode": false,
   "last_completed_phase": "phase-2",
   "execution_plan": { "waves": [...] },
@@ -141,6 +150,10 @@ worktree-setup.md Step 1).
 }
 ```
 
+The `main_repo_beads_db` field persists the path across context compaction
+so post-compaction recovery can reconstruct `br --db "$MAIN_REPO_BEADS_DB" ...`
+calls without re-deriving it.
+
 Write points:
 - After Phase 2 (worktree ready): initial state with all beads pending
 - During Phase 3 (after each bead): update bead_statuses and last_completed_phase
@@ -148,7 +161,8 @@ Write points:
 
 Note: `bead_statuses` stores execution status only (pending, done, skipped), not
 skip reasons or other details. After context compaction, re-fetch skip reasons
-and bead details from `br show <id> --json` rather than relying on in-memory state.
+and bead details from `br --db "$MAIN_REPO_BEADS_DB" show <id> --json` rather
+than relying on in-memory state.
 
 The state file lives in /tmp (outside the worktree) to avoid dirtying git.
 
@@ -169,13 +183,13 @@ Initialize tracking for this wave: beads completed, beads skipped.
 
 Execute the per-bead cycle from bead-implementation.md:
 
-1. **Claim**: `br update <bead_id> --status in_progress --json`
-2. **Load context**: `br show <bead_id> --json` - extract description and
-   verification commands
+1. **Claim**: `br --db "$MAIN_REPO_BEADS_DB" update <bead_id> --status in_progress --json`
+2. **Load context**: `br --db "$MAIN_REPO_BEADS_DB" show <bead_id> --json` -
+   extract description and verification commands
 3. **Implement**: inline or subagent mode per Phase 2 decision
 4. **Verify**: run extracted verification commands, assess errors by type
-5. **Close**: `br close <bead_id> --reason "..."` on success
-6. **Skip**: `br update <bead_id> --status open --notes "SKIPPED: ..."` on failure
+5. **Close**: `br --db "$MAIN_REPO_BEADS_DB" close <bead_id> --reason "..."` on success
+6. **Skip**: `br --db "$MAIN_REPO_BEADS_DB" update <bead_id> --status open --notes "SKIPPED: ..."` on failure
 
 **Commits:** follow the commit strategy from bead-implementation.md to create
 logical commits using `/commit`.
@@ -304,11 +318,12 @@ completion, not review outcome. Review quality is captured in Phase 4 and
 surfaced in the PR description - epic status tracks whether work is done.
 
 Classify all descendant beads by their current status. If context was
-compacted, re-derive the descendant list from `br show <EPIC_ID> --json`
-(the parent-field scan from Phase 1 is repeatable). The `bead_statuses` in
-the state file is a compaction safety net for execution plan beads only - it
-is not the source of truth. Re-query `br show <id> --json` for every
-descendant to get current statuses.
+compacted, re-derive the descendant list from
+`br --db "$MAIN_REPO_BEADS_DB" show <EPIC_ID> --json` (the parent-field scan
+from Phase 1 is repeatable). The `bead_statuses` in the state file is a
+compaction safety net for execution plan beads only - it is not the source
+of truth. Re-query `br --db "$MAIN_REPO_BEADS_DB" show <id> --json` for
+every descendant to get current statuses.
 
 Classify by current status (checked at handoff time, not plan time):
 
@@ -320,7 +335,7 @@ Classify by current status (checked at handoff time, not plan time):
 **If ALL descendant beads are closed** (completed count equals total descendants):
 
 ```bash
-br close <EPIC_ID> --reason "All beads implemented via /implement"
+br --db "$MAIN_REPO_BEADS_DB" close <EPIC_ID> --reason "All beads implemented via /implement"
 ```
 
 No user confirmation needed - the user approved the plan in Phase 1.
@@ -328,7 +343,7 @@ No user confirmation needed - the user approved the plan in Phase 1.
 **If some beads were skipped, remain blocked, or are in-progress elsewhere** (partial completion):
 
 ```bash
-br update <EPIC_ID> --status open --notes "$(cat <<'EOF'
+br --db "$MAIN_REPO_BEADS_DB" update <EPIC_ID> --status open --notes "$(cat <<'EOF'
 COMPLETED: <list>. SKIPPED: <list with reasons>. BLOCKED: <list>. IN_PROGRESS: <list>.
 EOF
 )"
@@ -423,7 +438,7 @@ worktree preservation path.
 | Bead in_progress by other session | Warn and skip |
 | Worktree already exists | Offer reuse or abort |
 | Branch name already exists | Offer alternative name or reuse |
-| br where fails in worktree | Warn, suggest BR_HOME |
+| br call fails in worktree | Ensure `--db "$MAIN_REPO_BEADS_DB"` is set; see shared/br-in-worktree.md |
 | Bead claim fails | Skip bead, continue to next |
 | Verification command not found | Skip that check, warn |
 | Subagent crashes or hangs | Reset bead to open, skip |
