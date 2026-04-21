@@ -26,8 +26,7 @@ placeholders:
 |-------------|---------|
 | CHANGES_SUMMARY | 2-3 sentences: what this PR accomplishes and why. Derived from the epic description, not a list of beads. |
 | DESIGN_DECISIONS | Key tradeoffs and decisions made during implementation, with reasoning. Entry point for reviewers. |
-| REVIEW_SUMMARY | One-line or short block summarizing the review outcome from Phase 4. |
-| VERIFICATION_RESULTS | List of verification commands run and their results (PASS/FAIL). |
+| VERIFICATION_RESULTS | Checkbox list of verification commands. Checked items passed; unchecked items were not run. |
 
 ## PR Title vs Body
 
@@ -151,44 +150,10 @@ either can evolve independently, at the cost of slightly less control over
 reviewer configuration.
 ```
 
-## Generating the Review Summary (REVIEW_SUMMARY)
-
-Derive from the review outcome record compiled in Phase 4.
-
-Select the case that matches the Phase 4 review outcome record. The record
-has three fields: outcome label, fixes status, and remaining issues. Map
-directly from those fields - do not require information the record does not
-capture.
-
-**If no findings** (fixes: "none needed"):
-```
-Reviewed by multi-agent team: no actionable findings.
-```
-
-**If findings fixed** (fixes: "applied"):
-```
-Reviewed by multi-agent team: findings identified and fixed.
-```
-
-**If findings remain for manual review** (fixes: "partially applied" or "skipped", or remaining is non-empty):
-```
-Reviewed by multi-agent team: findings identified. Some remain for manual review.
-```
-
-**If review was skipped** (no commits, or user opted out):
-```
-Review skipped: [reason].
-```
-
-Do not include numeric counts of findings, fixes, or deferrals. The review
-report contains the details; the PR summary should be qualitative. The agent
-may add brief context from the conversation (e.g., "disputed findings
-deferred") but the template should not require it.
-
 ## Generating Verification Results (VERIFICATION_RESULTS)
 
-List the verification commands that were run and their results. Use the most
-recent run of each command.
+List the verification commands as a GitHub-flavored markdown checkbox list.
+Use the most recent run of each command.
 
 **If Phase 4 made code changes** (fix commits exist): use the post-fix
 re-verification results from Phase 4 Step 2, not the Phase 3 results. The
@@ -197,10 +162,21 @@ Phase 3 results are stale after fix changes.
 **If Phase 4 made no code changes** (no fixes applied, or review was clean):
 use the Phase 3 results directly.
 
+Rules:
+
+- Passing commands render as checked boxes: `` - [x] `cmd` ``
+- Commands that could not be run in this environment render unchecked:
+  `` - [ ] `cmd` ``. Unchecked means "deferred / not yet run", not "failed".
+- Failing commands must not appear here. If a verification command fails,
+  the pipeline should not have reached PR-description generation - stop
+  and surface the failure instead of papering over it.
+
+Example:
+
 ```markdown
-- `mise run lint` - PASS
-- `mise run test` - PASS
-- `mise run build` - PASS
+- [x] `mise run lint`
+- [x] `mise run test`
+- [ ] `mise run test:e2e` (requires live cluster; run before merge)
 ```
 
 If verification was not run (e.g., no verification section in bead

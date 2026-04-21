@@ -278,8 +278,7 @@ references/pr-description.md:
 
 - **CHANGES_SUMMARY**: 2-3 sentences from epic description. Why this PR exists.
 - **DESIGN_DECISIONS**: key tradeoffs and reasoning. Primary reviewer entry point.
-- **REVIEW_SUMMARY**: qualitative review outcome (no numeric counts).
-- **VERIFICATION_RESULTS**: commands run with PASS/FAIL results.
+- **VERIFICATION_RESULTS**: GitHub-flavored checkbox list. `[x]` for commands that passed; `[ ]` for commands deferred (not yet run). Failures must not appear - stop the pipeline instead.
 
 **Step 4: Save and Present**
 
