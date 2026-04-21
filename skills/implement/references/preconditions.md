@@ -40,6 +40,30 @@ If the command fails:
 
 Record the title as **EPIC_TITLE**.
 
+## Check 4b: Epic not already claimed
+
+Read the `status` field from the `br show` output above.
+
+If `status == "in_progress"`, another /implement session may be actively
+working this epic. Surface the epic's notes (claim marker) and use
+AskUserQuestion:
+
+```
+questions: [{
+  question: "Epic <EPIC_ID> is already in_progress - another /implement session may be working it. What would you like to do?",
+  header: "Epic claimed",
+  options: [
+    { label: "Abort", description: "Stop without making changes (recommended)" },
+    { label: "Take over", description: "Proceed anyway - only safe if the other session is confirmed dead. Will overwrite claim notes." }
+  ],
+  multiSelect: false
+}]
+```
+
+If "Abort": exit the skill.
+If "Take over": proceed - the Phase 2 claim will rewrite the notes with the
+current session's worktree path.
+
 ## Check 5: No dependency cycles
 
 ```bash

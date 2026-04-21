@@ -50,6 +50,7 @@ Run all checks from the reference file in order, stopping at first failure:
 2. Not already in a worktree
 3. Epic ID provided (parse from `$ARGUMENTS`)
 4. Epic exists (record **EPIC_ID** and **EPIC_TITLE**)
+4b. Epic is not already claimed by another session (warn if in_progress)
 5. No dependency cycles
 6. Parse optional branch name and `--auto` flag from `$ARGUMENTS`
 7. Discover **BASE_REF** (default branch detection)
@@ -109,6 +110,7 @@ Follow the reference file to:
 3. Create worktree: `git worktree add .claude/worktrees/implement-<BRANCH_NAME> -b feat/<BRANCH_NAME> <BASE_REF>`
 4. Change working directory to **WORKTREE_PATH**
 5. Verify environment (br access, clean state)
+5b. Claim the epic: `br update <EPIC_ID> --status in_progress --notes "CLAIMED: ..."` (see worktree-setup.md Step 5b)
 6. Decide implementation mode (see bead-implementation.md for criteria)
 
 **State file for context protection**
@@ -304,13 +306,15 @@ No user confirmation needed - the user approved the plan in Phase 1.
 **If some beads were skipped, remain blocked, or are in-progress elsewhere** (partial completion):
 
 ```bash
-br update <EPIC_ID> --notes "$(cat <<'EOF'
+br update <EPIC_ID> --status open --notes "$(cat <<'EOF'
 COMPLETED: <list>. SKIPPED: <list with reasons>. BLOCKED: <list>. IN_PROGRESS: <list>.
 EOF
 )"
 ```
 
-The epic stays open for a future session to pick up remaining work.
+The `--status open` resets the claim from Phase 2 so `br ready` can
+surface the epic again. The notes record partial progress for the next
+session.
 
 **If br close or br update fails**: warn but do not block the handoff. Epic
 status resolution is best-effort.
@@ -373,6 +377,8 @@ worktree preservation path.
 | br CLI not installed | Stop with install instructions |
 | Already in worktree | Stop, tell user to exit first |
 | Epic not found | Stop with verification command |
+| Epic already in_progress (claimed) | Warn with claim notes, offer abort or take-over via AskUserQuestion |
+| Epic claim fails (br error) | Warn, continue implementation - epic just will not be visible as in_progress |
 | No children in epic | Stop with instructions to add beads |
 | Dependency cycles | Stop with cycle details |
 | No ready beads | Report blockers, exit |
@@ -417,5 +423,6 @@ worktree preservation path.
 - **PR creation requires approval**: never create PR without confirmation - PRs are visible to the team and trigger notifications
 - **Iterative PR editing**: allow user to refine description before saving - generated descriptions benefit from human judgment on tone and emphasis
 - **Epic status resolution**: auto-close the epic when all beads are done, update notes on partial completion. Best-effort - never block handoff on a br failure
+- **Epic claim**: mark the epic in_progress in Phase 2 after worktree creation so concurrent /implement sessions (and `br ready` scans) see it as taken. Reset to open in Phase 6 on partial completion so work can be resumed later
 
 $ARGUMENTS

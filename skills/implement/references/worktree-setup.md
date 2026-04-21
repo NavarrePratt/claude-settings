@@ -94,6 +94,27 @@ Verify clean state:
 git status --porcelain
 ```
 
+## Step 5b: Claim the Epic
+
+Mark the epic in_progress so other sessions (and `br ready` scans) see it
+as taken. Write a claim note recording the worktree path so a human can
+locate the active session.
+
+```bash
+br update <EPIC_ID> --status in_progress --notes "$(cat <<EOF
+CLAIMED: /implement session on branch feat/<BRANCH_NAME>
+Worktree: <WORKTREE_PATH>
+EOF
+)"
+```
+
+Do this AFTER worktree creation (not in Phase 0). If Phase 1 ends in
+"Cancel" or worktree creation fails, we never claim the epic.
+
+If the claim fails (br error, permissions), warn but do not abort -
+implementation can still proceed, the epic just will not be visible as
+in_progress to other sessions.
+
 ## Step 6: Create Artifact Directory and Determine Implementation Mode
 
 Create the artifact directory for state files, subagent summaries, and PR
