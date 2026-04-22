@@ -344,9 +344,11 @@ started on unless the original branch was the one we just deleted.
 
 ## Phase 7: Sweep /implement artifact directories
 
-`/implement` creates `/tmp/<REPO_NAME>-<EPIC_ID>/` with state.json,
-pr-title.txt, pr-description.md. After merge, these are safe to remove
-unless the user wants to keep the PR body for reference.
+`/implement` creates `/tmp/<REPO_NAME>-<EPIC_ID>/` with state.json and
+a pair of PR artifacts keyed by epic ID and branch slug
+(`<EPIC_ID>-<BRANCH_NAME>.md` and `<EPIC_ID>-<BRANCH_NAME>.txt`). After
+merge, these are safe to remove unless the user wants to keep the PR
+body for reference.
 
 ### Discovery
 
@@ -379,7 +381,7 @@ unambiguously, prompt:
 
 ```
 questions: [{
-  question: "Remove artifact directory /tmp/<repo>-<epic>/ (state.json, pr-title.txt, pr-description.md)?",
+  question: "Remove artifact directory /tmp/<repo>-<epic>/ (state.json and the PR draft files)?",
   header: "Artifact dir",
   options: [
     { label: "Remove (recommended)", description: "Sweep the artifact directory" },

@@ -123,10 +123,15 @@ in_progress to other sessions.
 Create the artifact directory for state files, subagent summaries, and PR
 descriptions. Use **REPO_NAME** (computed in Step 1).
 
-Set `ARTIFACT_DIR=/tmp/<REPO_NAME>-<EPIC_ID>` and create it safely:
+Set `ARTIFACT_DIR=/tmp/<REPO_NAME>-<EPIC_ID>` and create it safely.
+Also record **ARTIFACT_BASENAME** - the shared base name for PR
+artifacts (title and description). Including the epic ID and branch
+slug in the filenames makes concurrent `/implement` sessions
+distinguishable in editor tabs when reviewing drafts side by side.
 
 ```bash
 ARTIFACT_DIR="/tmp/<REPO_NAME>-<EPIC_ID>"
+ARTIFACT_BASENAME="<EPIC_ID>-<BRANCH_NAME>"
 
 if [ -e "$ARTIFACT_DIR" ] || [ -L "$ARTIFACT_DIR" ]; then
   # Path already exists - verify it is safe before proceeding

@@ -283,7 +283,7 @@ to derive the title:
 3. Map CHANGE_KIND to a prefix (when Conventional Commits applies) and
    compose an imperative ≤70-char subject with no trailing period.
 4. Apply the normalization rules from the reference.
-5. Save the final one-line title to `/tmp/<REPO_NAME>-<EPIC_ID>/pr-title.txt`.
+5. Save the final one-line title to `/tmp/<REPO_NAME>-<EPIC_ID>/<EPIC_ID>-<BRANCH_NAME>.txt` (i.e. `$ARTIFACT_DIR/$ARTIFACT_BASENAME.txt`).
 
 **Step 3: Generate Body**
 
@@ -296,8 +296,9 @@ references/pr-description.md:
 
 **Step 4: Save and Present**
 
-Save the body to `/tmp/<REPO_NAME>-<EPIC_ID>/pr-description.md` and keep
-the title at `/tmp/<REPO_NAME>-<EPIC_ID>/pr-title.txt` from Step 2.
+Save the body to `/tmp/<REPO_NAME>-<EPIC_ID>/<EPIC_ID>-<BRANCH_NAME>.md`
+(i.e. `$ARTIFACT_DIR/$ARTIFACT_BASENAME.md`) and keep the title at
+`/tmp/<REPO_NAME>-<EPIC_ID>/<EPIC_ID>-<BRANCH_NAME>.txt` from Step 2.
 Present both to the user and allow iterative editing; re-save the affected
 file after each edit.
 
@@ -371,8 +372,8 @@ Worktree: <WORKTREE_PATH>
 Beads: implemented and closed (list skipped beads if any)
 Commits: <git log --oneline <BASE_REF>..HEAD>
 Review: <review outcome summary>
-PR title: <contents of /tmp/<REPO_NAME>-<EPIC_ID>/pr-title.txt>
-PR description: /tmp/<REPO_NAME>-<EPIC_ID>/pr-description.md
+PR title: <contents of /tmp/<REPO_NAME>-<EPIC_ID>/<EPIC_ID>-<BRANCH_NAME>.txt>
+PR description: /tmp/<REPO_NAME>-<EPIC_ID>/<EPIC_ID>-<BRANCH_NAME>.md
 ```
 
 **Step 2: Action Options**
@@ -402,15 +403,16 @@ with both title and body passed explicitly (see
 
 ```bash
 ARTIFACT_DIR="/tmp/<REPO_NAME>-<EPIC_ID>"
-test -s "$ARTIFACT_DIR/pr-title.txt" || { echo "Error: missing PR title" >&2; exit 1; }
-test -s "$ARTIFACT_DIR/pr-description.md" || { echo "Error: missing PR body" >&2; exit 1; }
-awk 'NR>1 || length($0)>70 {exit 1}' "$ARTIFACT_DIR/pr-title.txt" \
-  || { echo "Error: pr-title.txt is multi-line or >70 chars" >&2; exit 1; }
+ARTIFACT_BASENAME="<EPIC_ID>-<BRANCH_NAME>"
+test -s "$ARTIFACT_DIR/$ARTIFACT_BASENAME.txt" || { echo "Error: missing PR title" >&2; exit 1; }
+test -s "$ARTIFACT_DIR/$ARTIFACT_BASENAME.md" || { echo "Error: missing PR body" >&2; exit 1; }
+awk 'NR>1 || length($0)>70 {exit 1}' "$ARTIFACT_DIR/$ARTIFACT_BASENAME.txt" \
+  || { echo "Error: PR title file is multi-line or >70 chars" >&2; exit 1; }
 
 PR_URL=$(gh pr create \
   --base "$BASE_REF" \
-  --title "$(cat "$ARTIFACT_DIR/pr-title.txt")" \
-  --body-file "$ARTIFACT_DIR/pr-description.md")
+  --title "$(cat "$ARTIFACT_DIR/$ARTIFACT_BASENAME.txt")" \
+  --body-file "$ARTIFACT_DIR/$ARTIFACT_BASENAME.md")
 echo "$PR_URL"
 PR_NUMBER=$(printf '%s\n' "$PR_URL" | grep -oE '[0-9]+$' | tail -1)
 ```

@@ -188,12 +188,15 @@ No explicit verification commands defined in bead descriptions.
 ## Output
 
 Two artifacts, saved side by side in the directory created during Phase 2
-(worktree setup):
+(worktree setup). Both files share a base name of `<EPIC_ID>-<BRANCH_NAME>`
+(recorded as **ARTIFACT_BASENAME** in worktree-setup.md Step 6) so
+concurrent `/implement` sessions produce distinguishable filenames in
+editor tabs:
 
-- `/tmp/<REPO_NAME>-<EPIC_ID>/pr-description.md` - rendered body from
-  `templates/pr-body.md` with placeholders substituted
-- `/tmp/<REPO_NAME>-<EPIC_ID>/pr-title.txt` - derived title as a single
-  line of plain text, already normalized per the rules above
+- `/tmp/<REPO_NAME>-<EPIC_ID>/<EPIC_ID>-<BRANCH_NAME>.md` - rendered body
+  from `templates/pr-body.md` with placeholders substituted
+- `/tmp/<REPO_NAME>-<EPIC_ID>/<EPIC_ID>-<BRANCH_NAME>.txt` - derived title
+  as a single line of plain text, already normalized per the rules above
 
 Present both the title and the full body to the user in the conversation
 for review. Allow iterative edits via conversation ("change the summary
