@@ -1,0 +1,22 @@
+[
+  {"query": "ok I'm about to PR this branch but I know I over-engineered that middleware - can we do a grug pass and actually cut the slop before I submit?", "should_trigger": true},
+  {"query": "let's trim the fat on feat/audit-logs before review, I added a base class with one subclass and some unreachable nil checks I don't think are reachable", "should_trigger": true},
+  {"query": "before the team sees this, run a cut pass - I know there's premature abstraction in the handlers dir and I want to amend the cuts back into the original commits", "should_trigger": true},
+  {"query": "clean up this branch before I push, I YAGNI'd way too hard on the config loader", "should_trigger": true},
+  {"query": "can you help me rebase onto main and then do a grug-brain sweep for over-engineering? I'll decide case by case what to cut", "should_trigger": true},
+  {"query": "I want to do the upstack impact map + codex slop review thing we did last time, then 1-by-1 walk through what to remove", "should_trigger": true},
+  {"query": "grug cut pass on this branch please, branch is feat/billing-refactor and I know I went overboard with the strategy pattern", "should_trigger": true},
+  {"query": "I have a stacked branch (gs-managed) and want to do the full cut workflow - scope it to just this branch, not the whole stack", "should_trigger": true},
+  {"query": "yak shaving removal pass before I submit - I'm pretty sure there's dead code, commented imports, and a retry decorator that's never going to retry", "should_trigger": true},
+  {"query": "amend the slop out of my commits before PR and run tests after to make sure nothing broke", "should_trigger": true},
+  {"query": "review this PR for complexity issues, just give me feedback, don't change anything", "should_trigger": false},
+  {"query": "give me grug-brain feedback on the changes I just made in pkg/auth/", "should_trigger": false},
+  {"query": "can you check if there's over-engineering in pkg/auth/ without changing anything - I just want a second opinion", "should_trigger": false},
+  {"query": "what does grug-brain philosophy say about interfaces with a single implementation? I'm trying to understand the principle", "should_trigger": false},
+  {"query": "write me a simple function to parse a config file without over-engineering it", "should_trigger": false},
+  {"query": "is this code too complex? just tell me, don't touch the code", "should_trigger": false},
+  {"query": "I want a comprehensive security review of this branch before I merge", "should_trigger": false},
+  {"query": "find all the bugs in this PR - specifically nil dereferences and race conditions", "should_trigger": false},
+  {"query": "run /grug-review on this diff and summarize the output", "should_trigger": false},
+  {"query": "rebase my branch onto origin/main - no code changes, just rebase", "should_trigger": false}
+]
