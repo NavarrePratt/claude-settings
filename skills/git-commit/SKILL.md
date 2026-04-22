@@ -155,51 +155,27 @@ or fixup changes the number and the message becomes a lie. Describe what was don
 4. Identify logical groupings of changes
 5. For each logical group:
    - Stage the relevant changes (use `git add -p` if needed)
-   - Create a commit with a well-formatted message **matching the project's style**
+   - Create the commit. Single-line: `git commit -m "subject"`. Multi-line: pass a heredoc directly to `-m`:
+     ```bash
+     git commit -m "$(cat <<'EOF'
+     subject line
+
+     body paragraph explaining why
+     EOF
+     )"
+     ```
    - Verify the commit with `git show`
 6. After all commits, run `git status` to verify nothing important was missed
 
-## ANSI Escape Code Prevention
+## Escape Codes in Commit Messages
 
-**CRITICAL**: Never include ANSI escape codes in commit messages. These codes appear as garbage characters like `^[[1m^[[30m` or `[0m[35m` in git logs.
+Commit messages should be plain ASCII. If you ever see garbage like `^[[1m^[[30m` or `[0m[35m` in `git log`, ANSI codes leaked in — usually from piping colored CLI output (`grep --color`, `ls --color`, issue tracker descriptions) into a message. Don't copy colored terminal output into commit bodies; paraphrase instead.
 
-### Root Cause
-
-The Bash tool applies syntax highlighting to heredoc content. This means using patterns like:
+To sanity-check a commit:
 ```bash
-git commit -m "$(cat <<'EOF'
-fix: some message with keywords like for, if, and, in
-EOF
-)"
+git log -1 --format=%B | grep -c $'\x1b'
 ```
-Will embed ANSI codes around Python/shell keywords (`for`, `if`, `and`, `in`, etc.) and punctuation.
-
-### Required Workaround
-
-**Always use the Write tool + git commit -F pattern:**
-
-1. Generate a unique filename under `/tmp/` (use `mktemp /tmp/commit-msg-XXXXXX`). Writing to `.git/` triggers sensitive-file permission prompts.
-2. Use the Write tool to create that file with the message content
-3. Run `git commit -F <file>` (or `git commit --amend -F <file>`)
-4. Clean up: `rm <file>` after the commit succeeds
-
-**Never use:**
-- `git commit -m "$(cat <<'EOF'...)"` - heredoc content gets syntax highlighted
-- `git commit -m "multi-line message"` - same issue
-
-### Other Sources of Escape Codes
-
-- CLI tool output with colors (br, grep --color, ls --color)
-- Issue tracker descriptions that store colored text
-- Copying text from terminal output
-
-### Verification
-
-After committing, verify no escape codes with:
-```bash
-git log -1 --format=%B | od -c | head -20
-```
-Look for `033 [` sequences which indicate ANSI codes. Clean commits show only printable ASCII.
+`0` means the message is clean. Any higher number means an ESC byte (start of an ANSI sequence) is present.
 
 ## Notes
 
