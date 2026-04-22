@@ -407,11 +407,27 @@ test -s "$ARTIFACT_DIR/pr-description.md" || { echo "Error: missing PR body" >&2
 awk 'NR>1 || length($0)>70 {exit 1}' "$ARTIFACT_DIR/pr-title.txt" \
   || { echo "Error: pr-title.txt is multi-line or >70 chars" >&2; exit 1; }
 
-gh pr create \
+PR_URL=$(gh pr create \
   --base "$BASE_REF" \
   --title "$(cat "$ARTIFACT_DIR/pr-title.txt")" \
-  --body-file "$ARTIFACT_DIR/pr-description.md"
+  --body-file "$ARTIFACT_DIR/pr-description.md")
+echo "$PR_URL"
+PR_NUMBER=$(printf '%s\n' "$PR_URL" | grep -oE '[0-9]+$' | tail -1)
 ```
+
+After `gh pr create` succeeds, auto-invoke /watch-pr with the parsed PR
+number so the user gets background follow-through on CI, reviews, and
+merge events without a second prompt. watch-pr is read-only (cannot post
+comments, merge, or push) so no additional approval is needed:
+
+```
+Skill(skill: "watch-pr", args: "<PR_NUMBER>")
+```
+
+If PR_NUMBER is empty (parsing failed) or the Skill invocation errors,
+warn the user with the raw PR URL and the manual command
+`/watch-pr <N>`, then finish the handoff. The PR was created
+successfully; watch-pr is a convenience, not a correctness requirement.
 
 **Push only**: confirm, push with `-u`.
 
@@ -451,6 +467,7 @@ worktree preservation path.
 | /commit skill fails | Report failure, let user resolve |
 | gh pr create fails | Report error, provide manual command |
 | git push fails | Report error, suggest manual push |
+| watch-pr invocation fails after PR create | Warn with PR URL and manual `/watch-pr <N>` command, finish handoff (PR is already created) |
 
 ## Guidelines
 
@@ -476,5 +493,6 @@ worktree preservation path.
 - **Iterative PR editing**: allow user to refine description before saving - generated descriptions benefit from human judgment on tone and emphasis
 - **Epic status resolution**: auto-close the epic when all beads are done, update notes on partial completion. Best-effort - never block handoff on a br failure
 - **Epic claim**: mark the epic in_progress in Phase 2 after worktree creation so concurrent /implement sessions (and `br ready` scans) see it as taken. Reset to open in Phase 6 on partial completion so work can be resumed later
+- **Auto-watch after PR creation**: after a successful "Push and create PR" in Phase 6, auto-invoke /watch-pr with the new PR number. The user opted into publishing the PR, and watch-pr is read-only (it cannot post comments, merge, or push) so no additional approval is needed. If watch-pr cannot be started, warn with the PR URL and the manual `/watch-pr <N>` command, then finish the handoff
 
 $ARGUMENTS
