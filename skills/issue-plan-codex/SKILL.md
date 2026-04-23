@@ -1,6 +1,6 @@
 ---
 name: issue-plan-codex
-description: Plan issues using autonomous AI debate between Claude (opus) and Codex (gpt-5.4). Heavyweight and thorough - best for complex architectural work, large refactors, or ambiguous problems that need deep analysis. Use when the work is too important for the lightweight issue-plan or when you need maximum rigor in discovery and planning without user involvement.
+description: Plan issues using autonomous AI debate between Claude (opus) and Codex. Heavyweight and thorough - best for complex architectural work, large refactors, or ambiguous problems that need deep analysis. Use when the work is too important for the lightweight issue-plan or when you need maximum rigor in discovery and planning without user involvement.
 ---
 
 # Planning Issues (Codex)
@@ -17,7 +17,7 @@ This command receives context from two sources:
 
 - **Task (Explore subagent)** - Thorough codebase exploration (inherits global model)
 - **Task (Plan subagent)** - Implementation design (inherits global model)
-- **mcp__codex__codex** - Cross-reference discovery with model: "gpt-5.4"
+- **mcp__codex__codex** - Cross-reference discovery (uses Codex global default)
 - **br CLI** - Issue creation, status management, and dependencies
 
 ---
@@ -42,7 +42,7 @@ Run a focused Explore query using the verification command discovery process in 
 ### Codex Discovery
 Use the codex MCP tool for additional discovery:
 ```
-mcp__codex__codex with model: "gpt-5.4"
+mcp__codex__codex
 prompt: "Explore [topic]. Find all relevant code, patterns, edge cases, and potential issues. Report findings comprehensively."
 ```
 Cross-reference Codex findings with Explore results to ensure nothing is missed.
@@ -65,11 +65,11 @@ Use multi-round refinement for thorough planning:
 Use the Plan subagent to design implementation approach based on discovery synthesis.
 
 ### Step 2: Collaborative Debate (2-4 rounds, until consensus or escalation)
-Claude (Opus) and Codex (gpt-5.4) debate back-and-forth to refine the plan:
+Claude (Opus) and Codex debate back-and-forth to refine the plan:
 
 **Round 1 - Dual Critique**:
 - **Claude (Opus)**: List 5-10 specific gaps, risks, or edge cases in the plan. For each, explain why it matters.
-- **Codex**: Use `mcp__codex__codex` with model "gpt-5.4":
+- **Codex**: Use `mcp__codex__codex`:
   ```
   prompt: "Review this implementation plan: [plan]. List 5-10 specific gaps, conflicts, or risks. For each issue: (1) What could break? (2) What assumption might be wrong? (3) Suggest a concrete mitigation."
   ```
@@ -77,7 +77,7 @@ Claude (Opus) and Codex (gpt-5.4) debate back-and-forth to refine the plan:
 
 **Round 2 - Address & Counter**:
 - **Claude (Opus)**: Propose specific revisions for each Round 1 concern. State which you accept, reject (with rationale), or defer.
-- **Codex**: Use `mcp__codex__codex` with model "gpt-5.4":
+- **Codex**: Use `mcp__codex__codex`:
   ```
   prompt: "Claude proposes these revisions: [revisions]. For each: (1) Does it actually solve the concern? (2) What breaks if Claude's assumption is wrong? (3) Suggest 1-2 concrete alternatives for weak points."
   ```
@@ -85,7 +85,7 @@ Claude (Opus) and Codex (gpt-5.4) debate back-and-forth to refine the plan:
 
 **Round 3 - Final Consensus** (skip if Round 2 achieved consensus):
 - **Claude (Opus)**: Present refined plan with all incorporated feedback. List any unresolved disagreements.
-- **Codex**: Use `mcp__codex__codex` with model "gpt-5.4":
+- **Codex**: Use `mcp__codex__codex`:
   ```
   prompt: "Final plan review: [plan]. Verify: (1) All discovered edge cases addressed or explicitly deferred? (2) Error/failure paths defined? (3) Testing strategy clear? (4) Dependencies sequenced correctly? List any gaps."
   ```
