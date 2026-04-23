@@ -142,10 +142,12 @@ gh api repos/OWNER/REPO/pulls/PR_NUMBER/comments --jq '.[] | {id, user: .user.lo
 
 ## Codex MCP
 
-When using the `mcp__codex__codex` tool for code reviews or other tasks:
-- Do NOT manually specify the `model` parameter unless the user explicitly requests a specific model
-- Let the global Codex configuration handle the default model selection
-- Only override the model when the command or user explicitly calls for it
+When using `mcp__codex__codex`:
+- Do not manually specify the `model` parameter unless the user explicitly requests a specific model.
+- Let Codex's global config (`~/.codex/config.toml`) select the default model.
+- The MCP `model` field is a free string, not an enum of available models. Do not infer that a model is unavailable from examples in the tool schema.
+- If a model override is explicitly requested, use the exact model slug, for example `gpt-5.5`.
+- If Codex reports a model error, quote the actual tool/runtime error rather than guessing from the schema.
 
 # Principals
 

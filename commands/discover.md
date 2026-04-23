@@ -45,9 +45,9 @@ If investigating an external repo (cloned via repo-explore), include queries tar
 **Codex MCP**:
 ```
 mcp__codex__codex
-model: "gpt-5.2-codex"
 prompt: "Investigate: [question]. Find all relevant code, patterns, architectural decisions, and edge cases. Return findings with absolute file paths and line numbers."
 ```
+Omit the `model` parameter; Codex's global config (`~/.codex/config.toml`) selects the model.
 
 ### Step 3: Synthesize Findings
 
