@@ -15,6 +15,7 @@ conversation context.
 | Commit log | `git log --oneline <BASE_REF>..HEAD` | Phase 5 |
 | Review outcome | Review outcome record | Phase 4 |
 | Verification results | Bead verification runs (Phase 3) or post-fix re-verification (Phase 4) | Phase 3/4 |
+| Bead summary files | `/tmp/<REPO_NAME>-<EPIC_ID>/<BEAD_ID>-summary.md` (subagent mode) | Phase 3 |
 | REPO_NAME and EPIC_ID | Phase 2 state / conversation context | Phase 0/2 |
 
 ## Template
@@ -27,6 +28,7 @@ placeholders:
 | CHANGES_SUMMARY | 2-3 sentences: what this PR accomplishes and why. Derived from the epic description, not a list of beads. |
 | DESIGN_DECISIONS | Key tradeoffs and decisions made during implementation, with reasoning. Entry point for reviewers. |
 | VERIFICATION_RESULTS | Checkbox list of verification commands. Checked items passed; unchecked items were not run. |
+| FOLLOW_UP_DISCOVERIES | Bulleted list of TODOs, related bugs, and follow-up work surfaced during implementation. Sourced from the Discoveries section of each bead's summary file. |
 
 ## PR Title vs Body
 
@@ -184,6 +186,59 @@ descriptions), write:
 ```
 No explicit verification commands defined in bead descriptions.
 ```
+
+## Generating Follow-up Discoveries (FOLLOW_UP_DISCOVERIES)
+
+Each bead subagent writes a summary file at
+`/tmp/<REPO_NAME>-<EPIC_ID>/<BEAD_ID>-summary.md` with a `## Discoveries`
+section capturing TODOs, related bugs, and follow-up work surfaced during
+implementation. These signals are the most valuable part of the summary
+for the next reader — without preservation they die when `/tmp` is cleaned
+up. Roll them into the PR body so they stay with the change.
+
+1. Enumerate bead summary files in `/tmp/<REPO_NAME>-<EPIC_ID>/`. Use the
+   list of completed beads from Phase 3 to know which summaries to expect.
+2. For each summary, extract the `## Discoveries` section. Same regex
+   pattern used for `## Verification` and `## Design Decisions` elsewhere:
+   match from `## Discoveries` through the next `## ` heading or
+   end-of-file.
+3. Normalize each extracted bullet so the reader can trace provenance:
+   prefix with `[from <BEAD_ID>]`, e.g. `- [from bd-xxx] Observed that the
+   retry logic in foo.py:120 double-counts failures.`
+4. Deduplicate identical bullets across summaries (different beads can
+   surface the same underlying issue).
+5. Aggregate into a single bulleted list and substitute into
+   `FOLLOW_UP_DISCOVERIES`.
+
+Rules:
+
+- A bead summary with `## Discoveries` containing only `None` or empty
+  content contributes nothing; skip silently.
+- If no bead in the epic produced any discoveries, write:
+  ```
+  None identified during implementation.
+  ```
+- If the run used inline mode (no per-bead summary files exist), write:
+  ```
+  Inline implementation — Discoveries not structurally tracked.
+  ```
+  Inline mode keeps the work in the lead's conversation rather than
+  spawning subagents, so there are no summary files to aggregate from.
+
+Example:
+
+```markdown
+- [from bd-aaa] The error path in `src/auth/middleware.ts:78` swallows
+  the underlying exception. Worth tracing in a follow-up.
+- [from bd-aaa] `User.is_admin` is checked in two places with subtly
+  different logic; consider consolidating.
+- [from bd-bbb] The fixture loader assumes UTC; tests may drift on other
+  runners.
+```
+
+Do NOT file new beads for these discoveries automatically. The PR body is
+a human-readable channel; if the lead or user wants to track a discovery
+as work, they run `/issue-create` explicitly.
 
 ## Output
 
