@@ -8,6 +8,15 @@ the lead agent to commit.
 **Worktree**: WORKTREE_PATH
 **Parent Epic**: BEAD_PARENT
 
+## Parent Epic Design Decisions
+
+The parent epic documents design choices that apply to every bead in this
+epic. Read them before implementing — if the bead description and the epic
+design decisions conflict, the bead wins, but the epic gives you the "why"
+that may not be repeated in each bead.
+
+EPIC_DESIGN_DECISIONS
+
 ## Bead Description
 
 BEAD_DESCRIPTION

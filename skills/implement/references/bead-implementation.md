@@ -47,6 +47,27 @@ verification commands. These are typically formatted as:
 
 Extract the backtick-enclosed commands into a list for Step 4.
 
+#### Fetch Parent Epic Design Decisions
+
+Parent epics document design choices that apply to every child bead. Fetch
+the parent and extract its `## Design Decisions` section so the
+implementer sees the "why" alongside the "what":
+
+```bash
+br --db "$MAIN_REPO_BEADS_DB" show <PARENT_EPIC_ID> --json
+```
+
+Apply the same regex extraction pattern used for `## Verification` — match
+from `## Design Decisions` through the next `## ` heading or end of
+description. Bind the extracted text to the `EPIC_DESIGN_DECISIONS`
+template variable used by `templates/bead-prompt.md`.
+
+Fallbacks:
+- Parent epic has no `## Design Decisions` section → render `EPIC_DESIGN_DECISIONS`
+  as the literal string `None captured.` (the template assumes non-empty)
+- Bead has no parent epic (rare for /implement, since epic resolution is
+  the entry point) → render `EPIC_DESIGN_DECISIONS` as `Not applicable.`
+
 ### Step 3: Implement
 
 #### Inline Mode
@@ -109,6 +130,7 @@ Template variables to substitute in templates/bead-prompt.md:
 - `BEAD_TITLE` - short title from bead
 - `BEAD_DESCRIPTION` - full description text
 - `BEAD_PARENT` - parent epic ID
+- `EPIC_DESIGN_DECISIONS` - parent epic's `## Design Decisions` section, extracted the same way as `## Verification`; falls back to `None captured.` when the epic lacks the section, or `Not applicable.` when there is no parent epic
 - `WORKTREE_PATH` - absolute path to the worktree
 - `VERIFICATION_COMMANDS` - extracted verification commands
 - `PRIOR_SUMMARIES` - context from previously completed beads (capped; see Cross-Bead Context)
