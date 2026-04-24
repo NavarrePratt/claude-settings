@@ -1,7 +1,7 @@
 ---
 name: grug-cut-pass
 description: Cuts unnecessary complexity (slop) from a branch before PR submission and amends the cuts back into the original commits. Full workflow that applies changes: runs a Codex grug-brain pass to find premature abstraction, dead code, unreachable defensive checks, YAGNI hooks, and indirection without benefit; walks the user through cut/keep/defer decisions one-by-one; amends cuts into origin commits via interactive rebase; verifies tests still pass. Use this skill proactively whenever the user wants to clean up, trim, tighten, or cut slop from a branch before they submit a PR. Triggers include "grug cut pass", "grug pass", "cut the slop", "trim the fat", "clean up before PR", "yak shaving removal", "prune this branch", "amend slop out of commits", "remove over-engineering", "grug-brain sweep", "pre-PR cleanup", or any phrasing about removing complexity before review. Unlike /grug-review which only produces a checklist, this skill actually applies the cuts and rebases - reach for it when the user wants action, not just feedback.
-argument-hint: "[--auto] [--rebase] [--single-commit]"
+argument-hint: "[--auto] [--rebase] [--single-commit] [--epic <EPIC_ID>]"
 ---
 
 # Grug Cut Pass
@@ -49,6 +49,7 @@ Parse arguments:
 - `--auto` - apply the conservative auto-approve path in Phase 4; still asks on borderline findings
 - `--rebase` - run Phase 2 automatically; otherwise Phase 2 prompts via AskUserQuestion
 - `--single-commit` - Phase 5 produces one cut-pass commit rather than amending origin commits
+- `--epic <EPIC_ID>` - explicit epic to load planning context from; falls back to branch-name parse otherwise
 
 ---
 
@@ -71,6 +72,8 @@ Load [phase-1-scope.md](references/phase-1-scope.md).
 Default scope: current branch vs BASE_REF. If STACKED and current branch is part of a gs stack, ask the user (AskUserQuestion) whether to scope to current branch only or whole stack. Whole-stack adds an upstack impact map to the findings context passed to Codex.
 
 Build FILE_LIST from `git diff --name-only <BASE_REF>..HEAD`. If the file list is empty, report "no commits on branch" and exit.
+
+After FILE_LIST is built, follow `~/.claude/skills/shared/planning-context.md` to produce **planning_context** using the `--epic` flag value (if passed) or the branch-name parse fallback. This block is passed through to Codex in Phase 3 so slop detection respects intentional design decisions — a single-impl abstraction the plan explicitly chose for a second implementation is Acceptable, not Slop.
 
 ### Phase 2: Mechanical Rebase
 

@@ -1,7 +1,7 @@
 ---
 name: team-branch-review
 description: Comprehensive branch review using a parallel agent team with Codex validation. Use when reviewing all commits on a branch before creating a PR, especially for large or complex branches that benefit from multi-perspective review. Trigger on "review my branch", "check before I PR", "full code review", "pre-PR review", "team review", or "review before merge".
-argument-hint: "[optional extra instructions]"
+argument-hint: "[--epic <EPIC_ID>] [optional extra instructions]"
 ---
 
 # Team Branch Review
@@ -64,12 +64,15 @@ gh pr view --json title,body --jq '"## " + .title + "\n\n" + .body' 2>/dev/null
 
 If a PR exists, save the output as **pr_context**. If the command fails (no PR exists), set **pr_context** to empty string.
 
+**Parse arguments and resolve epic**: Check if `$ARGUMENTS` begins with `--epic <EPIC_ID>`. If so, extract the ID and strip the flag (and its value) from the remaining arguments. Then follow `~/.claude/skills/shared/planning-context.md` to produce **planning_context** — the rendered block substituted into the reviewer prompt's `PLANNING_CONTEXT` placeholder. If no `--epic` was passed, that procedure falls back to parsing the branch name and finally to the "no linked planning context" string. Do not stop the pipeline if resolution fails — the fallback is valid output.
+
 Record:
 - **lines_changed**: Total lines added + removed
 - **files_changed**: List of all changed file paths
 - **commit_count**: Number of commits
 - **base_commit**: The exact commit hash (use this everywhere, not "main")
 - **pr_context**: The PR title and body if a PR exists, otherwise empty
+- **planning_context**: The rendered block from the planning-context loader
 - **team_name**: Compute a unique team name: take the branch name, replace `/` with `-`, truncate to 30 chars, then prefix with `review-` and append `-` plus the first 6 chars of HEAD's commit hash. Example: branch `feat/add-auth` at commit `a1b2c3d` becomes `review-feat-add-auth-a1b2c3`. Use this value everywhere a team_name is needed.
 
 ### Phase 2: Determine Team Composition
@@ -169,6 +172,7 @@ Substitute these placeholders before passing to each reviewer:
 | TEAM_NAME | The team name computed in Phase 1 (used for findings file path) |
 | REVIEWER_NAME | The reviewer's name, e.g. `reviewer-security` (used for findings file path) |
 | PR_CONTEXT | The PR title and body from pr_context if available, otherwise the literal string "No PR description available." |
+| PLANNING_CONTEXT | The rendered planning_context block from Phase 1 (falls back to "No linked planning context available — reviewing against general code-quality heuristics only." when no epic resolved) |
 | TEAM_ROSTER | List of all OTHER reviewers (omit current). Format each as: `- reviewer-name: Focus description` |
 
 ### Phase 4: Wait for All Reviewers to Complete

@@ -26,6 +26,10 @@ Your exclusive focus: FOCUS_DESCRIPTION
 COMMIT_SUMMARY
 </commit-data>
 
+## Planning Context
+
+PLANNING_CONTEXT
+
 ## Your Teammates
 
 TEAM_ROSTER
@@ -72,6 +76,12 @@ Commits:
 COMMIT_SUMMARY
 </commit-data>
 Diff range: DIFF_RANGE
+
+## Planning Context
+
+PLANNING_CONTEXT
+
+Treat the planning context as the reference for intent. If a finding contradicts a design decision the author already made consciously, either drop it or flag it as a tradeoff the author should re-examine — do not restate the decision as a defect.
 
 ## Domain Expertise
 

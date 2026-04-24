@@ -27,6 +27,14 @@ You are NOT doing a security review, a correctness review, or an architecture re
 
 {{UPSTACK_IMPACT}}
 
+# Planning Context
+
+{{PLANNING_CONTEXT}}
+
+Planning context describes intentional design decisions from the epic that produced this branch. Treat it as ground truth for intent. A single-impl abstraction the plan explicitly chose in anticipation of a second implementation is **Acceptable**, not Slop — mark it accordingly with `acceptable_reason` referencing the design decision. Only flag as Slop if the code adds complexity **beyond** what the plan justifies.
+
+If planning context is unavailable ("No linked planning context available — reviewing against general code-quality heuristics only."), proceed with the standard grug-brain framing below.
+
 # Diff
 
 ```diff

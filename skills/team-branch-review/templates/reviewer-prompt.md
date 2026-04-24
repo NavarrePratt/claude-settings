@@ -12,6 +12,10 @@ Your exclusive focus: FOCUS_DESCRIPTION
 
 PR_CONTEXT
 
+## Planning Context
+
+PLANNING_CONTEXT
+
 ## Your Teammates
 
 TEAM_ROSTER
@@ -54,6 +58,12 @@ Use this prompt (substitute YOUR_FINDINGS with your actual findings from Step 1)
 You are a senior code reviewer validating findings from a FOCUS_AREA specialist. Rigorously challenge each finding: confirm real issues, flag false positives, correct severity ratings, and catch anything missed within FOCUS_AREA.
 
 Branch: BRANCH_NAME (base: BASE_COMMIT)
+
+## Planning Context
+
+PLANNING_CONTEXT
+
+Treat the planning context as the reference for intent. If a finding contradicts a design decision the author already made consciously, either drop it or flag it as a tradeoff the author should re-examine — do not restate the decision as a defect.
 
 ## Domain Expertise
 

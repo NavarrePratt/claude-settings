@@ -14,6 +14,7 @@ Read `templates/codex-prompt.md` and replace these placeholders with Phase 1 out
 | `{{FILE_LIST}}` | Contents of `$TMP_DIR/file-list.txt` |
 | `{{DIFF_TEXT}}` | Contents of `$TMP_DIR/diff.patch` |
 | `{{UPSTACK_IMPACT}}` | Contents of `$TMP_DIR/upstack-impact.md` if whole-stack, else empty |
+| `{{PLANNING_CONTEXT}}` | Rendered planning_context from Phase 1 (via `~/.claude/skills/shared/planning-context.md`). Falls back to "No linked planning context available — reviewing against general code-quality heuristics only." when no epic resolves. |
 
 If `DIFF_TEXT` exceeds ~300K characters, truncate per-file to the first 2000 lines of each file's diff and note the truncation in the prompt.
 

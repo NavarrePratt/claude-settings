@@ -63,15 +63,18 @@ Skip the entire review pipeline and proceed to the next phase.
 
 ## Invoke Review
 
-Invoke the review skill using the Skill tool:
+Invoke the review skill using the Skill tool, passing the current epic ID so
+reviewers see the planning context:
 
 ```
-Skill(skill: "team-branch-review")
+Skill(skill: "team-branch-review", args: "--epic <EPIC_ID>")
 ```
 
-The review skill detects branch and base commit automatically via its Context
-section. It spawns reviewer agents, validates findings with Codex, and produces
-a report with one of three outcomes.
+Substitute `<EPIC_ID>` with the epic resolved during Phase 0. The review skill
+detects branch and base commit automatically via its Context section. It spawns
+reviewer agents (each injecting the epic's Design Decisions into their prompt
+via `~/.claude/skills/shared/planning-context.md`), validates findings with
+Codex, and produces a report with one of three outcomes.
 
 ## Parse Outcome and Compute Actionable Findings
 
@@ -159,15 +162,19 @@ Invoke the fix pipeline. The invocation mode depends on the caller's
   findings and skip disputed ones.
 
   ```
-  Skill(skill: "team-branch-fix", args: "--auto <paste the review report>")
+  Skill(skill: "team-branch-fix", args: "--auto --epic <EPIC_ID> <paste the review report>")
   ```
 
 - **From /implement without --auto, or standalone** (interactive): no `--auto`
   flag. The fix skill presents each finding to the user for include/exclude.
 
   ```
-  Skill(skill: "team-branch-fix", args: "<paste the review report>")
+  Skill(skill: "team-branch-fix", args: "--epic <EPIC_ID> <paste the review report>")
   ```
+
+Substitute `<EPIC_ID>` with the epic resolved during Phase 0 so fix agents see
+the same planning context the reviewers did. The flag is optional — if omitted,
+the fix skill falls back to parsing the branch name.
 
 The fix skill handles:
 - Finding selection (auto or interactive)

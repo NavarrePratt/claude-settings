@@ -1,7 +1,7 @@
 ---
 name: team-branch-fix
 description: Implement fixes for code review findings using a parallel agent team. Accepts a review report (from /team-branch-review, /team-commit-review, or pasted), interviews the user on which findings to fix (or runs autonomously with --auto), then spawns agents to implement fixes in parallel with Codex validation.
-argument-hint: "[--auto] [review report or path to report]"
+argument-hint: "[--auto] [--epic <EPIC_ID>] [review report or path to report]"
 ---
 
 # Team Branch Fix
@@ -76,11 +76,13 @@ Create temp directory for fixer results:
 mkdir -p /tmp/fix-TEAM_NAME
 ```
 
-### Phase 0.5: Parse Auto Mode
+### Phase 0.5: Parse Auto Mode and Planning Context Flags
 
-Parse the `--auto` flag from ARGUMENTS before any other processing.
+Parse optional leading flags from ARGUMENTS before any other processing.
 
-**Parsing rule:** If ARGUMENTS starts with `--auto` (first whitespace-delimited token), set `AUTO_MODE = true` and strip `--auto` from the arguments before passing the remainder to Phase 1. If `--auto` appears anywhere other than the first token, ignore it (treat as part of the review report text). If ARGUMENTS does not start with `--auto`, set `AUTO_MODE = false`.
+**Auto-mode parsing rule:** If ARGUMENTS starts with `--auto` (first whitespace-delimited token), set `AUTO_MODE = true` and strip `--auto` from the arguments before passing the remainder to Phase 1. If `--auto` appears anywhere other than the first token, ignore it (treat as part of the review report text). If ARGUMENTS does not start with `--auto`, set `AUTO_MODE = false`.
+
+**Epic flag parsing rule:** After stripping `--auto`, check whether the next tokens are `--epic <EPIC_ID>`. If so, capture `EPIC_ID` and strip both tokens. If not present, leave `EPIC_ID` unset — the planning-context loader falls back to branch-name parsing in Phase 1.
 
 When `AUTO_MODE` is true, all AskUserQuestion calls in subsequent phases are replaced with deterministic defaults. Each auto-decision is logged to an **Auto-Mode Decision Log** table (columns: Phase, Finding, Decision, Reason). The Phase 2 decisions are printed at Step 4 before fix agents are spawned. Later auto-decisions (Phases 7.5 and 9) are appended and the complete log is included in the Phase 9 Auto-Mode Summary.
 
@@ -118,6 +120,8 @@ Parse the report and extract all findings into a structured list. Assign each fi
 - Found by (which reviewer)
 
 See [Decision Schema](references/decision-schema.md) for the full finding data model including decision tracking fields populated in later phases.
+
+After parsing the report, follow `~/.claude/skills/shared/planning-context.md` to produce **planning_context** using the `EPIC_ID` captured in Phase 0.5 (falling back to branch-name parse, then to the "no linked planning context" string). Keep this value for use in Phase 5's fix agent prompt. The lead should also consult it during Phase 2 interviews: a finding that fights an explicit design decision is a strong "Skip" candidate, not a silent "Fix."
 
 ### Phase 1.5: Finding Canonicalization
 
@@ -483,7 +487,7 @@ Store discovered commands for Phase 6.
 
 ### Fix Agent Prompt Template
 
-Each fix agent receives this prompt (substitute FILE_LIST, FINDINGS, CWD, TEAM_NAME, and FIXER_NAME):
+Each fix agent receives this prompt (substitute FILE_LIST, FINDINGS, CWD, TEAM_NAME, FIXER_NAME, and PLANNING_CONTEXT):
 
 ```
 You are implementing code fixes for specific review findings. You have exclusive ownership of your assigned files - no other agent will touch them.
@@ -493,6 +497,12 @@ You are implementing code fixes for specific review findings. You have exclusive
 FILE_LIST
 
 Do NOT modify any files outside this list.
+
+## Planning Context
+
+PLANNING_CONTEXT
+
+If a finding asks you to change something the planning context explicitly chose, prefer a minimal patch that addresses the specific defect without reversing the design decision. If the only viable fix would contradict the design decision, mark the finding as Blocked with that reason and fallback options — do not silently override the plan.
 
 ## Findings to Fix
 

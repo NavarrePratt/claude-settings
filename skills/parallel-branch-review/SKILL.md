@@ -1,7 +1,7 @@
 ---
 name: parallel-branch-review
 description: Comprehensive branch review using parallel background agents with Codex validation. Each reviewer runs as an independent background task - results are collected only after all agents complete, eliminating premature synthesis. Use for thorough pre-PR review of any branch size.
-argument-hint: "[optional extra instructions]"
+argument-hint: "[--epic <EPIC_ID>] [optional extra instructions]"
 ---
 
 # Parallel Branch Review
@@ -61,12 +61,15 @@ gh pr view --json title,body --jq '"## " + .title + "\n\n" + .body' 2>/dev/null
 
 If a PR exists, save the output as **pr_context**. If the command fails (no PR exists), set **pr_context** to empty string.
 
+**Parse arguments and resolve epic**: Check if `$ARGUMENTS` begins with `--epic <EPIC_ID>`. If so, extract the ID and strip the flag (and its value) from the remaining arguments. Then follow `~/.claude/skills/shared/planning-context.md` to produce **planning_context** — the rendered block substituted into the reviewer prompt's `PLANNING_CONTEXT` placeholder. If no `--epic` was passed, that procedure falls back to parsing the branch name and finally to the "no linked planning context" string. Do not stop the pipeline if resolution fails — the fallback is valid output.
+
 Record:
 - **lines_changed**: Total lines added + removed
 - **files_changed**: List of all changed file paths
 - **commit_count**: Number of commits
 - **base_commit**: The exact commit hash (use this everywhere, not "main")
 - **pr_context**: The PR title and body if a PR exists, otherwise empty
+- **planning_context**: The rendered block from the planning-context loader
 
 ### Phase 2: Determine Team Composition
 
@@ -156,6 +159,7 @@ Substitute these placeholders before passing to each reviewer:
 | FILE_LIST | All changed file paths, one per line |
 | CWD | Working directory |
 | PR_CONTEXT | The PR title and body from pr_context if available, otherwise the literal string "No PR description available." |
+| PLANNING_CONTEXT | The rendered planning_context block from Phase 1 (falls back to "No linked planning context available — reviewing against general code-quality heuristics only." when no epic resolved) |
 
 ### Phase 4: Collect All Results
 

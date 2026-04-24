@@ -1,11 +1,20 @@
 ---
 name: grug-review
 description: Review code with grug-brain anti-complexity philosophy. Use when reviewing PRs, diffs, or code changes to identify unnecessary complexity.
+argument-hint: "[--epic <EPIC_ID>]"
 ---
 
 # Grug Code Review
 
 Review code changes through the grug-brain lens. Complexity is the enemy.
+
+## Planning Context
+
+Before running the checklist, follow `~/.claude/skills/shared/planning-context.md` to resolve an epic (via `--epic <EPIC_ID>` flag, branch name parse, or fallback) and produce a planning-context block. Surface the block at the top of your output — reviewers and the user see the same intent signal the code authors worked against.
+
+If the loader falls back to "No linked planning context available — reviewing against general code-quality heuristics only.", print that line and proceed with the checklist normally.
+
+When planning context exists, treat explicit design decisions as intentional: complexity the plan chose is not automatically "slop." Flag it only if the complexity exceeds what the decision justifies.
 
 ## Review Checklist
 
