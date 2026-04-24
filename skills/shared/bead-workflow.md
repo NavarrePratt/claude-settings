@@ -52,27 +52,110 @@ Stop searching a category once you find an authoritative source.
 
 Create issues using `br create` with `--status deferred` to prevent atari from picking them up before planning is complete.
 
-For each issue:
-```bash
-br create "Title" --status deferred --description "..." --json
-# Track the IDs for later publishing
+### Carry-forward principle
+
+You just produced a rich plan through investigation (Explore, Codex debate, user interview, or all three). That investigation is the PRIMARY SOURCE for bead descriptions. When creating each bead, **copy the relevant Design / Files / Gotchas / Test Strategy content from the synthesis directly into the description**. Do not re-describe. Paste and adapt. The implementer executing this bead autonomously will see only what you write here — not the conversation history, not the synthesis document, not your Explore findings.
+
+A bead description that reads like a one-paragraph ticket is a sign the carry-forward did not happen. Go back and move the relevant planning content into the description before moving on.
+
+### Bead description template
+
+Every bead description uses this structure. `## ` (double-hash) headings throughout — the implementer's parser depends on this.
+
+**Required core sections** (always present):
+
+```
+## Goal
+[One sentence — the outcome, not the task. What is true about the system after this bead is done.]
+
+## Why
+[2-4 sentences — the motivation. Link to the parent epic's goal if not obvious from Goal alone.]
+
+## Design
+[The technical approach, copied from the synthesis. For non-trivial choices, note alternatives considered and why this path won. This is the most important section — it is the plan, not a summary of the plan.]
+
+## Files
+[Concrete paths discovered during planning. Include line ranges where helpful as anchor points.]
+- path/to/file.ext:45-120 — [why this file, what changes here]
+- path/to/other.ext — [why]
+
+## Acceptance Criteria
+- [ ] [testable boolean condition — what is true when this bead is done]
+- [ ] [...]
+
+## Verification
+- [ ] `[discovered lint command]` passes
+- [ ] `[discovered static analysis command]` passes
+- [ ] `[discovered test command]` passes
+- [ ] `[discovered e2e command]` passes (if applicable)
 ```
 
-Each issue must:
-1. Have clear acceptance criteria (what success looks like)
-2. Be scoped to complete in one session
-3. End with verification notes using **discovered commands** (not generic phrases):
-   ```
-   ## Verification
-   - [ ] `[discovered lint command]` passes
-   - [ ] `[discovered static analysis command]` passes
-   - [ ] `[discovered test command]` passes
-   - [ ] `[discovered e2e command]` passes (if applicable)
-   ```
-   Use exact commands from discovery. Omit categories if no command exists.
-4. Include note: "If implementation reveals new issues, create separate issues for investigation"
+**Optional extras** — include any that planning surfaced, omit the rest entirely (do not write empty headings):
+
+```
+## Patterns to Follow
+[Existing conventions the implementer should mirror. Cite by file path with line numbers where possible — the implementer should read the real source, not a summary of it.]
+
+## Test Strategy
+[What tests to add or update, where. Distinguish unit / integration / regression. Name the test files explicitly.]
+
+## Out of Scope
+[Explicit "do not touch" boundaries. Often the highest-leverage section for autonomous execution — tells the implementer where to stop.]
+
+## Gotchas
+[Non-obvious constraints found during planning: race conditions, deprecated APIs, fragile dependencies, test environment quirks, edge cases the plan handles in a specific way.]
+
+## Cross-bead Notes
+[If this bead depends on or constrains siblings in the same epic, say so. Reference sibling bead IDs where known.]
+```
+
+Also include this closing note at the end of every description:
+
+> If implementation reveals new issues, create separate issues for investigation.
+
+### Size signal
+
+Target description length: **250-1000 words** for a typical bead. A one-paragraph description means planning was incomplete — go back and investigate before creating. Beads much over 1000 words are a sign this should be split into sibling beads.
+
+### Example invocation
+
+```bash
+br create "Title" --status deferred --description "$(cat <<'BEAD_DESC_EOF'
+## Goal
+...
+
+## Why
+...
+
+## Design
+...
+
+## Files
+- ...
+
+## Acceptance Criteria
+- [ ] ...
+
+## Verification
+- [ ] `...` passes
+
+If implementation reveals new issues, create separate issues for investigation.
+BEAD_DESC_EOF
+)" --json
+# Track the returned ID for later publishing
+```
 
 **Track all created issue IDs** for the publish step.
+
+### Optional: investigation-trace comment
+
+If planning produced concrete investigation artifacts worth preserving (raw Explore findings with file paths and line numbers, Codex debate rounds that surfaced a non-obvious constraint, interview answers that clarified a design choice), attach them as a bead comment so the implementer can consult the evidence without bloating the description:
+
+```bash
+br comments add <bead-id> --file /tmp/<bead-id>-investigation.md
+```
+
+Write the investigation artifact to the temp file first, then attach. Skip this step for simple beads — not every bead needs an investigation trace. Only attach when the raw evidence would meaningfully help the implementer make decisions that the distilled description cannot cover.
 
 ## Final Verification Issue (Deferred)
 
@@ -111,32 +194,35 @@ After all issues are created and dependencies set, create an epic as a summary o
 - P2 (default): Normal priority, processed in creation order among equals
 - P3-P4: Lower priority, will be worked after higher-priority epics complete
 
+Use `## ` (double-hash) headings throughout — `/implement` extracts the epic's `## Design Decisions` section by regex and surfaces it in the implementer's prompt.
+
 ```bash
 br create "[feature/task name]" --type epic --priority <N> --description "$(cat <<'EOF'
-# Overview
+## Overview
 [Brief description of the overall work being planned]
 
-# Scope
+## Scope
 [What this epic covers]
 
-# Implementation Issues
+## Implementation Issues
 - bd-xxx: [issue title]
 - bd-xxx: [issue title]
 - bd-xxx: Run full E2E/integration test suite (final verification)
 
-# Verification Commands
+## Verification Commands
 - Lint: `[discovered lint command]`
 - Static analysis: `[discovered static analysis command]`
 - Tests: `[discovered test command]`
 - E2E: `[discovered e2e command]`
 
-# Design Decisions
+## Design Decisions
 [Document key design decisions and tradeoffs from planning. For each decision:
 what was chosen, what alternatives were considered, and why this approach won.
 Focus on choices where a reasonable person might have decided differently.
-This section feeds directly into the PR description - write it for reviewers.]
+This section feeds directly into the PR description AND is surfaced in every
+child bead's implementer prompt — write it for both audiences.]
 
-# Success Criteria
+## Success Criteria
 All implementation issues closed and E2E verification passes.
 EOF
 )" --json
@@ -150,9 +236,22 @@ br dep add bd-xxx <epic-id> --type parent-child
 
 Check epic progress: `br epic status`
 
+## Pre-publish self-check
+
+Before transitioning beads from deferred to open, read each bead description and honestly answer these four questions:
+
+1. Could a fresh implementer with no conversation context tell **which files to touch**?
+2. Could they tell **what "done" looks like** (concrete, testable)?
+3. Could they tell **what NOT to touch** — the scope boundaries?
+4. Could they tell **which existing patterns to mirror**, with specific file references?
+
+If any answer is "no," revise the description before publishing. These four capabilities are what separate a plan-mode-quality bead from a ticket stub. The carry-forward from your synthesis should already have addressed them — if it did not, something was dropped between planning and creation.
+
+Run this check per-bead, not per-epic. A well-described epic with thin children still produces stuck implementers.
+
 ## Publish All Beads
 
-After the epic is created and all dependencies are set, publish all beads by transitioning them from deferred to open status. This makes them available to `br ready` and atari.
+After the epic is created, all dependencies are set, AND the pre-publish self-check passes, publish all beads by transitioning them from deferred to open status. This makes them available to `br ready` and atari.
 
 ```bash
 # Publish all deferred beads created during this planning session
@@ -166,5 +265,6 @@ done
 - All dependencies are set up
 - Epic is created and children linked
 - You have verified the dependency graph is correct
+- The pre-publish self-check above has passed for every bead
 
 This ensures atari will not pick up any beads until the entire plan is ready and properly sequenced.

@@ -15,16 +15,39 @@ Track work with `br` for persistent context across sessions.
 
 ## Create Issue
 
+Bead descriptions use a structured template with `## ` (double-hash) headings. The implementer's parser depends on this heading level — do not use `# ` single-hash.
+
+**Required core sections** (always present): Goal, Why, Design, Files, Acceptance Criteria, Verification.
+
+**Optional extras** (include when planning surfaced the content, omit otherwise): Patterns to Follow, Test Strategy, Out of Scope, Gotchas, Cross-bead Notes.
+
 ```bash
 br create --title "Title" --description "$(cat <<'EOF'
-# Description
-What and why (1-4 sentences).
+## Goal
+[One sentence — the outcome, not the task.]
 
-# Relevant files
-Files and snippets from discovery.
+## Why
+[2-4 sentences — motivation, link to broader work.]
+
+## Design
+[Technical approach. For non-trivial choices, note alternatives considered and why this path won.]
+
+## Files
+- path/to/file.ext:45-120 — [why this file, what changes here]
+
+## Acceptance Criteria
+- [ ] [testable boolean condition]
+
+## Verification
+- [ ] `[lint command]` passes
+- [ ] `[test command]` passes
+
+If implementation reveals new issues, create separate issues for investigation.
 EOF
 )" --json
 ```
+
+Target description length: 250-1000 words. A one-paragraph description means the plan was incomplete — investigate before creating. For the full planning-to-beads workflow (verification discovery, epic creation, dependency sequencing, pre-publish self-check), see `~/.claude/skills/shared/bead-workflow.md`.
 
 ### Deferred Status for Batch Creation
 

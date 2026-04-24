@@ -88,18 +88,26 @@ Create a bead (issue) using the br CLI. Here is everything you need:
 2. **Discover relevant files** (only if Known Files says "none" or is incomplete) -
    Find files that will need modification and related test files.
 
-3. **Create the bead** using br create (deferred status until epic is linked):
+3. **Create the bead** using br create (deferred status until epic is linked).
+   Use `## ` (double-hash) headings throughout — the /implement parser depends on this level.
+   Required core sections: Goal, Why, Files, Acceptance Criteria, Verification.
+   Optional extras when the brief or discovery surfaced the content: Design, Gotchas, Out of Scope.
+   Omit optional sections entirely when empty — do not write empty headings.
+
    br create 'Title' --priority <N> --status deferred --description "$(cat <<'BEAD_DESC_EOF'
-   # Description
-   [What and why from brief]
+   ## Goal
+   [One sentence — the outcome, not the task]
 
-   # Relevant Files
-   - path/to/file - [reason]
+   ## Why
+   [2-4 sentences from the brief — motivation and context]
 
-   # Acceptance Criteria
+   ## Files
+   - path/to/file.ext:LINE-RANGE — [why this file, what changes here]
+
+   ## Acceptance Criteria
    - [ ] [criterion from brief]
 
-   # Verification
+   ## Verification
    - [ ] `[discovered lint command]` passes
    - [ ] `[discovered test command]` passes
 
@@ -107,19 +115,22 @@ Create a bead (issue) using the br CLI. Here is everything you need:
    BEAD_DESC_EOF
    )" --json
 
-4. **Create wrapping epic and link** (every bead gets its own epic):
+4. **Create wrapping epic and link** (every bead gets its own epic).
+   Use `## ` (double-hash) headings — `/implement` extracts the epic's
+   `## Design Decisions` by regex if present, and single-hash headers will
+   not match.
    ```bash
    br create '[topic name]' --type epic --priority <same as bead> --description "$(cat <<'BEAD_DESC_EOF'
-   # Overview
+   ## Overview
    Wrapping epic for [brief topic description].
 
-   # Scope
+   ## Scope
    [One sentence describing what this epic covers]
 
-   # Implementation Issues
+   ## Implementation Issues
    (linked below)
 
-   # Success Criteria
+   ## Success Criteria
    All linked beads completed.
    BEAD_DESC_EOF
    )" --json
