@@ -106,6 +106,44 @@ Read and follow the bead creation process in `../shared/bead-workflow.md`. This 
 3. **Create Epic** - Summarize the planned work as an epic with all children linked
 4. **Publish All Beads** - Transition from deferred to open once the dependency graph is complete
 
+### Attach Debate Transcript
+
+After the epic exists (its ID comes back from the Create Epic step), preserve the full debate as a comment on the epic. The conclusions landed in the epic's `## Design Decisions`, but the arguments and counterarguments — *why* specific tradeoffs were accepted or rejected — are the reasoning future readers (implementers, reviewers, a later planner revisiting this work) need when judging whether the chosen approach still holds under new context.
+
+Compose the transcript from the debate rounds above, using this structure. Omit rounds that did not run:
+
+```
+# Planning Debate Transcript — <EPIC_ID>
+
+## Round 1: Dual Critique
+
+### Claude's critique
+[verbatim list from Round 1]
+
+### Codex response
+[verbatim from mcp__codex__codex output]
+
+### Synthesis
+[what overlapped, what was accepted, what was deferred]
+
+## Round 2: Address & Counter
+[same shape: Claude's proposed revisions, Codex's counter, synthesis]
+
+## Round 3: Final Consensus
+[Claude's refined plan, Codex's validation, any unresolved disagreements]
+
+## Final consensus
+[what was agreed; any points left unresolved and the reason for leaving them]
+```
+
+Write the transcript to `/tmp/<EPIC_ID>-debate.md` and attach:
+
+```bash
+br comments add <EPIC_ID> --file /tmp/<EPIC_ID>-debate.md
+```
+
+Skip this step only when the debate was trivial (one round, immediate agreement). Whenever there was real back-and-forth — disputed edge cases, rejected alternatives, assumptions that had to be re-examined — attach. A 3-6K-word transcript is typical for the lightweight haiku variant and manageable as a comment.
+
 ## Output Summary
 
 After creating and publishing beads, output a clear summary:

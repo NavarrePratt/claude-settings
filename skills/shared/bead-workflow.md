@@ -147,15 +147,23 @@ BEAD_DESC_EOF
 
 **Track all created issue IDs** for the publish step.
 
-### Optional: investigation-trace comment
+### Optional: evidence-preservation comments
 
-If planning produced concrete investigation artifacts worth preserving (raw Explore findings with file paths and line numbers, Codex debate rounds that surfaced a non-obvious constraint, interview answers that clarified a design choice), attach them as a bead comment so the implementer can consult the evidence without bloating the description:
+Planning often produces rich artifacts that should outlive the planning session but would bloat a description. Attach them as comments on the relevant issue — per-bead for bead-specific evidence, on the epic for cross-epic evidence that applies to every child.
+
+**Per-bead artifacts** (attach to the bead): raw Explore findings with file paths and line numbers; interview answers that clarified one specific design choice; reproductions for a bug being tracked.
 
 ```bash
 br comments add <bead-id> --file /tmp/<bead-id>-investigation.md
 ```
 
-Write the investigation artifact to the temp file first, then attach. Skip this step for simple beads — not every bead needs an investigation trace. Only attach when the raw evidence would meaningfully help the implementer make decisions that the distilled description cannot cover.
+**Epic-level artifacts** (attach to the epic): full Codex debate transcripts; interview recordings covering the whole plan; architecture sketches that span multiple beads. See the skill-specific instructions in `issue-plan/SKILL.md` and `issue-plan-codex/SKILL.md` for the debate-transcript pattern.
+
+```bash
+br comments add <epic-id> --file /tmp/<epic-id>-debate.md
+```
+
+Write the artifact to a temp file first, then attach. Skip this step when the evidence would not meaningfully help a future reader — not every bead needs an investigation trace, and a trivial one-round debate does not need a transcript. Attach whenever the raw evidence captures reasoning that the distilled description cannot.
 
 ## Final Verification Issue (Deferred)
 
