@@ -96,14 +96,14 @@ Follow these seven rules for excellent commit messages (adjust for conventional 
 5. **Use imperative mood in subject** - "Add feature" not "Added feature"
    - Test: Subject should complete "If applied, this commit will _____"
 6. **Wrap body at 72 characters** - Ensures readability in terminals
-7. **Use body to explain what and why vs. how** - Code shows how, commit explains why
+7. **Use a body only when it adds real context** - Most commits need only a subject. When a body is useful, explain why or a non-obvious consequence, not how.
 
 ### Message Structure
 
 ```
 <subject: concise summary, imperative, capitalized, no period>
 
-<body: explain the motivation for the change and contrast with previous behavior>
+<optional body: one short paragraph explaining why or a non-obvious consequence>
 
 <footer: references to issues, breaking changes, etc.>
 ```
@@ -111,9 +111,29 @@ Follow these seven rules for excellent commit messages (adjust for conventional 
 ### Key Principles
 
 - **Atomic commits**: Each commit should represent one logical change
-- **Context is king**: Explain WHY the change was made, not just what
+- **Context is bounded**: Explain WHY only when the subject and diff do not already make it clear
 - **Future-proof**: Write for someone (including future you) reading this months later
 - **Consistency**: Maintain uniform style across the project
+
+### Body Length
+
+Default to no body. Use a body only when the commit needs context the
+subject and diff do not provide.
+
+When present, keep the body to one short paragraph, usually 1-4
+sentences. Use two paragraphs only for genuinely risky or surprising
+changes. Do not exceed ~100 words without a specific reason.
+
+Don't:
+- Walk through files, functions, helpers, or implementation steps
+- Enumerate tests added or recap what each test asserts
+- Pre-answer reviewer questions or list alternatives considered
+- Repeat the subject in prose
+- Turn the commit body into a PR description
+
+Put broad motivation, review context, design history, and detailed test
+coverage in the PR description or linked design doc, not the commit
+message.
 
 ### Examples
 

@@ -17,11 +17,17 @@ Use `/commit` slash command for all commits—creates atomic, well-formatted com
 
 Every PR must have a meaningful description. Never create PRs with empty bodies.
 
-When writing PR descriptions and commit messages:
+When writing PR descriptions:
 - Explain why the change was made, not what changed. We can read the code.
 - Link relevant Slack threads, JIRA tickets, and design documents
-- Write for the future: the on-call engineer debugging at 3am will not know about your Slack discussion. PRs and commits serve future readers, not just current reviewers.
+- Write for the future: the on-call engineer debugging at 3am will not know about your Slack discussion. PRs serve future readers, not just current reviewers.
 - Include enough context that someone unfamiliar with the work can understand the motivation from the PR alone
+
+Commit messages are different: keep them brief. Most commits should be
+subject-only. Add a body only for why or a non-obvious consequence that
+cannot be inferred from the subject and diff. Do not use commit bodies
+for PR-level context, implementation walkthroughs, or test inventories.
+See the git-commit skill for body length rules.
 
 # Bead Creation Boundary
 
