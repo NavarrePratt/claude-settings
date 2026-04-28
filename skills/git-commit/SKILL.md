@@ -1,6 +1,6 @@
 ---
 name: git-commit
-description: Create logically grouped, atomic git commits with well-formatted commit messages following best practices. Use this skill when you need to commit changes to a git repository with proper message formatting and atomic grouping. After the skill completes, read the git note on HEAD (`git notes show HEAD`) and check for an "Open Questions" section. If it contains any questions (not just "None"), use AskUserQuestion to loop through each one with the user so unresolved decisions get discussed rather than buried in git notes.
+description: Create logically grouped, atomic git commits with well-formatted commit messages following best practices. Use this skill when you need to commit changes to a git repository with proper message formatting and atomic grouping. Before creating commits, reflect on the work just completed and surface any open questions or unresolved decisions (judgment calls made without checking, deferred edge cases, defaults picked when multiple options were viable, trade-offs that could reasonably go the other way) via AskUserQuestion so they get discussed with the user rather than silently committed.
 allowed-tools:
   - Bash
   - Read

@@ -23,9 +23,18 @@ If beads is tracked (not gitignored):
 1. Run `br sync --flush-only` to export any pending changes to JSONL
 2. Stage `.beads/issues.jsonl` along with other changes
 
-## Git Notes
+## Surface Open Questions
 
-After each commit, read `~/.claude/rules/git-notes.md` and attach a git note following its format.
-Pay close attention to the information safety rules.
+Before creating commits, reflect on the work just completed and identify any open questions or unresolved decisions:
+
+- Judgment calls made without checking with the user (where another reasonable choice exists)
+- Inconsistencies in the codebase noticed but not fixed
+- Defaults picked for configuration when multiple options were viable
+- Trade-offs that could reasonably go the other way
+- Edge cases or missing tests that were deferred
+
+If any genuinely exist, use AskUserQuestion to surface them before committing. Do NOT commit silently and move on - the point is to bring these to the user's attention while context is fresh.
+
+If nothing is genuinely unresolved, proceed directly to commit without inventing questions.
 
 $ARGUMENTS
